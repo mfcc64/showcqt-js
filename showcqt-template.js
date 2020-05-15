@@ -54,25 +54,16 @@
  * analyser_left.fftSize = cqt.fft_size;
  * analyser_right.fftSize = cqt.fft_size;
  *
- * // Get analyser buffer. Should be called again, when cqt is reinitialized again by
- * // cqt.init() with different rate.
- * var buffer_left = cqt.get_input_array(0);
- * var buffer_right = cqt.get_input_array(1);
- *
- * // Get line buffer. Should be called again, when cqt is reinitialized again by cqt.init()
- * // with different width.
- * var line_buffer = cqt.get_output_array();
- *
  * function draw() {
  *     // Set input time domain data.
- *     analyser_left.getFloatTimeDomainData(buffer_left);
- *     analyser_right.getFloatTimeDomainData(buffer_right);
+ *     analyser_left.getFloatTimeDomainData(cqt.inputs[0]);
+ *     analyser_right.getFloatTimeDomainData(cqt.inputs[1]);
  *     cqt.calc();
  *     for (let y = 0; y < height; y++) {
- *         // Render line, result is in line_buffer.
+ *         // Render line, result is in cqt.output.
  *         // equal to cqt.render_line_opaque(y)
  *         cqt.render_line_alpha(y, 255);
- *         canvas_buffer.data.set(line_buffer, 4*width*y);
+ *         canvas_buffer.data.set(cqt.output, 4*width*y);
  *     }
  *     requestAnimationFrame(draw);
  * }
@@ -114,12 +105,11 @@
                     this.fft_size = exports.init(rate, width, height, bar_v, sono_v, supersampling);
                     if (!this.fft_size)
                         throw new Error("ShowCQT init: cannot initialize ShowCQT");
-                },
-                get_input_array: function(idx) {
-                    return new Float32Array(buffer, exports.get_input_array(idx), this.fft_size);
-                },
-                get_output_array: function() {
-                    return new Uint8ClampedArray(buffer, exports.get_output_array(), this.width * 4);
+                    this.inputs = [
+                        new Float32Array(buffer, exports.get_input_array(0), this.fft_size),
+                        new Float32Array(buffer, exports.get_input_array(1), this.fft_size)
+                    ];
+                    this.output = new Uint8ClampedArray(buffer, exports.get_output_array(), this.width * 4);
                 },
                 calc: exports.calc,
                 render_line_alpha: exports.render_line_alpha,
