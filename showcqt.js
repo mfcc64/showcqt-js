@@ -313,7 +313,7 @@ const wasm_embedded_base64 = "" +
 "Y181MTISC2ZmdF9jYWxjXzY0EwtmZnRfY2FsY18xNhQMZmZ0X2NhbGNfMTI4FQtmZnRfY2FsY18z" +
 "MhYKZmZ0X2NhbGNfOAA9CXByb2R1Y2VycwEMcHJvY2Vzc2VkLWJ5AQVjbGFuZx0xMC4wLjAgKEZl" +
 "ZG9yYSAxMC4wLjAtMS5mYzMyKQ==";
-    
+
     let decode64 = function(b64) {
         var str = atob(b64);
         var buf = new Uint8Array(str.length);

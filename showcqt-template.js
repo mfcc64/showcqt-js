@@ -73,7 +73,7 @@
 
 {
 //wasm_embedded_base64
-    
+
     let decode64 = function(b64) {
         var str = atob(b64);
         var buf = new Uint8Array(str.length);
