@@ -193,8 +193,9 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
         double freq = exp(log_base + (f + 0.5) * (log_end - log_base) * (1.0/cqt.t_size));
 
         if (freq >= 0.5 * rate) {
-            cqt.kernel[idx].i = 0;
-            break;
+            cqt.kernel_index[f].len = 0;
+            cqt.kernel_index[f].start = 0;
+            continue;
         }
 
         double tlen = 384*0.33 / (384/0.17 + 0.33*freq/(1-0.17)) + 384*0.33 / (0.33*freq/0.17 + 384/(1-0.17));
@@ -206,17 +207,17 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
 
         if (idx + len + 1000 > MAX_KERNEL_SIZE)
             return 0;
-        cqt.kernel[idx].i = len;
-        cqt.kernel[idx+1].i = start;
+        cqt.kernel_index[f].len = len;
+        cqt.kernel_index[f].start = start;
 
         for (int x = start; x <= end; x++) {
             int sign = (x & 1) ? (-1) : 1;
             double y = 2.0 * M_PI * (x - center) * (1.0 / flen);
             double w = 0.355768 + 0.487396 * cos(y) + 0.144232 * cos(2*y) + 0.012604 * cos(3*y);
             w *= sign * (1.0/cqt.fft_size);
-            cqt.kernel[idx+2+x-start].f = w;
+            cqt.kernel[idx+x-start] = w;
         }
-        idx += len+2;
+        idx += len;
     }
     return cqt.fft_size;
 }
@@ -247,8 +248,8 @@ WASM_EXPORT void calc(void)
     fft_calc(cqt.fft_buf, cqt.fft_size);
 
     for (int x = 0, m = 0; x < cqt.t_size; x++) {
-        int len = cqt.kernel[m].i;
-        int start = cqt.kernel[m+1].i;
+        int len = cqt.kernel_index[x].len;
+        int start = cqt.kernel_index[x].start;
         if (!len) {
             cqt.color_buf[x] = (ColorF){0,0,0,0};
             continue;
@@ -257,7 +258,7 @@ WASM_EXPORT void calc(void)
         for (int y = 0; y < len; y++) {
             int i = start + y;
             int j = cqt.fft_size - i;
-            float u = cqt.kernel[m+2+y].f;
+            float u = cqt.kernel[m+y];
             a.re += u * cqt.fft_buf[i].re;
             a.im += u * cqt.fft_buf[i].im;
             b.re += u * cqt.fft_buf[j].re;
@@ -276,7 +277,7 @@ WASM_EXPORT void calc(void)
         cqt.color_buf[x].b = (c < 255.5f) ? c : 255.5f;
         cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r0+r1));
 
-        m += len+2;
+        m += len;
     }
 
     if (cqt.t_size != cqt.width) {

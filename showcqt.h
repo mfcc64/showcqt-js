@@ -64,6 +64,11 @@ typedef union Kernel {
     int   i;
 } Kernel;
 
+typedef struct KernelIndex {
+    int len;
+    int start;
+} KernelIndex;
+
 typedef struct ShowCQT {
     /* args */
     float       input[2][MAX_FFT_SIZE];
@@ -80,6 +85,10 @@ typedef struct ShowCQT {
     ColorF      color_buf[MAX_WIDTH*2];
     float       rcp_h_buf[MAX_WIDTH];
 
+    /* kernel */
+    KernelIndex kernel_index[MAX_WIDTH*2];
+    float       kernel[MAX_KERNEL_SIZE];
+
     /* props */
     int         width;
     int         height;
@@ -88,9 +97,6 @@ typedef struct ShowCQT {
     int         attack_size;
     float       sono_v;
     float       bar_v;
-
-    /* kernel */
-    Kernel      kernel[MAX_KERNEL_SIZE];
 } ShowCQT;
 
 #endif
