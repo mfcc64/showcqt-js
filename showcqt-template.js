@@ -104,6 +104,7 @@
         cqt.width = 0;
         cqt.inputs = null;
         cqt.output = null;
+        cqt.color = null;
         cqt.calc = invalid_func;
         cqt.render_line_alpha = invalid_func;
         cqt.render_line_opaque = invalid_func;
@@ -143,6 +144,7 @@
                         new Float32Array(buffer, exports.get_input_array(0), this.fft_size),
                         new Float32Array(buffer, exports.get_input_array(1), this.fft_size)
                     ];
+                    this.color = new Float32Array(buffer, exports.get_color_array(), this.width * 4);
                     this.output = new Uint8ClampedArray(buffer, exports.get_output_array(), this.width * 4);
                     this.calc = exports.calc;
                     this.render_line_alpha = exports.render_line_alpha;

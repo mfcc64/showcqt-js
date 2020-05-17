@@ -34,6 +34,11 @@ WASM_EXPORT Color *get_output_array(void)
     return cqt.output;
 }
 
+WASM_EXPORT ColorF *get_color_array(void)
+{
+    return cqt.color_buf;
+}
+
 static unsigned revbin(unsigned x, int bits)
 {
     unsigned m = 0x55555555;
@@ -354,13 +359,10 @@ WASM_EXPORT void calc(void)
         float r0 = v0.re*v0.re + v0.im*v0.im;
         float r1 = v1.re*v1.re + v1.im*v1.im;
 
-        float c = 255.5f * sqrtf(cqt.sono_v * sqrtf(r0));
-        cqt.color_buf[x].r = (c < 255.5f) ? c : 255.5f;
-        c = 255.5f * sqrtf(cqt.sono_v * sqrtf(0.5f * (r0+r1)));
-        cqt.color_buf[x].g = (c < 255.5f) ? c : 255.5f;
-        c = 255.5f * sqrtf(cqt.sono_v * sqrtf(r1));
-        cqt.color_buf[x].b = (c < 255.5f) ? c : 255.5f;
-        cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r0+r1));
+        cqt.color_buf[x].r = sqrtf(cqt.sono_v * sqrtf(r0));
+        cqt.color_buf[x].g = sqrtf(cqt.sono_v * sqrtf(0.5f * (r0 + r1)));
+        cqt.color_buf[x].b = sqrtf(cqt.sono_v * sqrtf(r1));
+        cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r0 + r1));
 
         m += len;
     }
@@ -379,6 +381,14 @@ WASM_EXPORT void calc(void)
 
 static void prerender(void)
 {
+    for (int x = 0; x < cqt.width; x++) {
+        ColorF *c = cqt.color_buf;
+        c[x].r = 255.5f * (c[x].r >= 0.0f ? (c[x].r <= 1.0f ? c[x].r : 1.0f) : 0.0f);
+        c[x].g = 255.5f * (c[x].g >= 0.0f ? (c[x].g <= 1.0f ? c[x].g : 1.0f) : 0.0f);
+        c[x].b = 255.5f * (c[x].b >= 0.0f ? (c[x].b <= 1.0f ? c[x].b : 1.0f) : 0.0f);
+        c[x].h = c[x].h >= 0.0f ? c[x].h : 0.0f;
+    }
+
 #if WASM_SIMD
     for (int x = cqt.width; x < cqt.aligned_width; x++) {
         cqt.color_buf[x] = (ColorF){ 0, 0, 0, 0 };
