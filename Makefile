@@ -1,6 +1,7 @@
 
 CC=clang
-CFLAGS=-O2 -fvisibility=hidden --target=wasm32
+CFLAGS=-O2 -fvisibility=hidden --target=wasm32 -fno-vectorize
+SIMDFLAGS=-DWASM_SIMD=1
 LD=wasm-ld
 LDFLAGS=--no-entry --export-dynamic --allow-undefined --gc-sections -O3 --lto-O3
 
@@ -18,5 +19,8 @@ showcqt-simd.o: showcqt.c showcqt.h
 showcqt.wasm: showcqt.o
 	$(LD) showcqt.o $(LDFLAGS) -o showcqt.wasm
 
-showcqt.js: embed-base64 showcqt-template.js showcqt.wasm
+showcqt-simd.wasm: showcqt-simd.o
+	$(LD) showcqt-simd.o $(LDFLAGS) -o showcqt-simd.wasm
+
+showcqt.js: embed-base64 showcqt-template.js showcqt.wasm showcqt-simd.wasm
 	./embed-base64

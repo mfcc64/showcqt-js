@@ -163,6 +163,7 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
 
     cqt.width = width;
     cqt.height = height;
+    cqt.aligned_width = WASM_SIMD ? 4 * ceil(width * 0.25) : width;
 
     cqt.bar_v = (bar_v > MAX_VOL) ? MAX_VOL : (bar_v > MIN_VOL) ? bar_v : MIN_VOL;
     cqt.sono_v = (sono_v > MAX_VOL) ? MAX_VOL : (sono_v > MIN_VOL) ? sono_v : MIN_VOL;
@@ -289,12 +290,40 @@ WASM_EXPORT void calc(void)
         }
     }
 
-    for (int x = 0; x < cqt.width; x++)
-        cqt.rcp_h_buf[x] = 1.0f / (cqt.color_buf[x].h + 0.0001f);
+    cqt.prerender = 1;
 }
 
+static void prerender(void)
+{
+#if WASM_SIMD
+    for (int x = cqt.width; x < cqt.aligned_width; x++) {
+        cqt.color_buf[x] = (ColorF){ 0, 0, 0, 0 };
+    }
+#endif
+
+    for (int x = 0; x < cqt.aligned_width; x++)
+        cqt.rcp_h_buf[x] = 1.0f / (cqt.color_buf[x].h + 0.0001f);
+
+#if WASM_SIMD
+    for (int x = 0; x < cqt.aligned_width; x += 4) {
+        ColorF4 color;
+        color.r = (float32x4){ cqt.color_buf[x].r, cqt.color_buf[x+1].r, cqt.color_buf[x+2].r, cqt.color_buf[x+3].r };
+        color.g = (float32x4){ cqt.color_buf[x].g, cqt.color_buf[x+1].g, cqt.color_buf[x+2].g, cqt.color_buf[x+3].g };
+        color.b = (float32x4){ cqt.color_buf[x].b, cqt.color_buf[x+1].b, cqt.color_buf[x+2].b, cqt.color_buf[x+3].b };
+        color.h = (float32x4){ cqt.color_buf[x].h, cqt.color_buf[x+1].h, cqt.color_buf[x+2].h, cqt.color_buf[x+3].h };
+        *(ColorF4 *)(cqt.color_buf + x) = color;
+    }
+#endif
+
+    cqt.prerender = 0;
+}
+
+#if !WASM_SIMD
 WASM_EXPORT void render_line_alpha(int y, uint8_t alpha)
 {
+    if (cqt.prerender)
+        prerender();
+
     if (y >= 0 && y < cqt.height) {
         float ht = (cqt.height - y) / (float) cqt.height;
         for (int x = 0; x < cqt.width; x++) {
@@ -310,6 +339,49 @@ WASM_EXPORT void render_line_alpha(int y, uint8_t alpha)
             cqt.output[x] = (Color){cqt.color_buf[x].r, cqt.color_buf[x].g, cqt.color_buf[x].b, alpha};
     }
 }
+#else
+WASM_EXPORT WASM_SIMD_FUNCTION void render_line_alpha(int y, uint8_t alpha)
+{
+    if (cqt.prerender)
+        prerender();
+
+    int32x4 a = { alpha, alpha, alpha, alpha };
+    a = a << 24;
+
+    if (y >= 0 && y < cqt.height) {
+        float htf = (cqt.height - y) / (float) cqt.height;
+        float32x4 ht = { htf, htf, htf, htf };
+        for (int x = 0; x < cqt.aligned_width; x += 4) {
+            ColorF4 color = *(ColorF4 *)(cqt.color_buf + x);
+            int32x4 mask = color.h > ht;
+            int cmp = ((int32x4) __builtin_shufflevector((uint8x16) mask, (uint8x16) mask,
+                      0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1))[0];
+            if (cmp) {
+                float32x4 mul = (color.h - ht) * *(float32x4 *)(cqt.rcp_h_buf + x);
+                mul = (float32x4)((int32x4)mul & mask);
+                int32x4 r = __builtin_convertvector(mul * color.r, int32x4);
+                int32x4 g = __builtin_convertvector(mul * color.g, int32x4);
+                int32x4 b = __builtin_convertvector(mul * color.b, int32x4);
+                g = g << 8;
+                b = b << 16;
+                *(int32x4 *)(cqt.output + x) = (r | g) | (b | a);
+            } else {
+                *(int32x4 *)(cqt.output + x) = a;
+            }
+        }
+    } else {
+        for (int x = 0; x < cqt.aligned_width; x += 4) {
+            ColorF4 color = *(ColorF4 *)(cqt.color_buf + x);
+            int32x4 r = __builtin_convertvector(color.r, int32x4);
+            int32x4 g = __builtin_convertvector(color.g, int32x4);
+            int32x4 b = __builtin_convertvector(color.b, int32x4);
+            g = g << 8;
+            b = b << 16;
+            *(int32x4 *)(cqt.output + x) = (r | g) | (b | a);
+        }
+    }
+}
+#endif
 
 WASM_EXPORT void render_line_opaque(int y)
 {

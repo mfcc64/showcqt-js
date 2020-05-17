@@ -40,6 +40,16 @@ WASM_IMPORT double ceil(double);
 WASM_IMPORT double floor(double);
 WASM_IMPORT float sqrtf(float);
 
+#ifndef WASM_SIMD
+#define WASM_SIMD 0
+#endif
+
+#if WASM_SIMD
+#define WASM_SIMD_FUNCTION __attribute__((__target__("simd128")))
+#else
+#define WASM_SIMD_FUNCTION
+#endif
+
 #define MAX_FFT_SIZE 32768
 #define MAX_WIDTH 7680
 #define MAX_HEIGHT 4320
@@ -58,6 +68,21 @@ typedef struct Color {
 typedef struct ColorF {
     float r, g, b, h;
 } ColorF;
+
+#if WASM_SIMD
+typedef float   float32x4   __attribute__((__vector_size__(16), __aligned__(16)));
+typedef float   float32x4u  __attribute__((__vector_size__(16), __aligned__(4)));
+typedef int32_t int32x4     __attribute__((__vector_size__(16), __aligned__(16)));
+typedef uint8_t uint8x16    __attribute__((__vector_size__(16), __aligned__(16)));
+
+typedef struct Complex4 {
+    float32x4 re, im;
+} Complex4;
+
+typedef struct ColorF4 {
+    float32x4 r, g, b, h;
+} ColorF4;
+#endif
 
 typedef union Kernel {
     float f;
@@ -92,11 +117,13 @@ typedef struct ShowCQT {
     /* props */
     int         width;
     int         height;
+    int         aligned_width;
     int         fft_size;
     int         t_size;
     int         attack_size;
     float       sono_v;
     float       bar_v;
+    int         prerender;
 } ShowCQT;
 
 #endif
