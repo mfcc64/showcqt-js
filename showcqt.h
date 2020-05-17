@@ -27,6 +27,7 @@
 #define WASM_EXPORT extern __attribute__((__visibility__("default")))
 #define WASM_IMPORT extern
 #define DECLARE_ALIGNED(n) __attribute__((__aligned__(n)))
+#define ALWAYS_INLINE __inline__ __attribute__((__always_inline__, __nodebug__))
 
 /* minimalist math.h definition */
 #define M_PI 3.14159265358979323846

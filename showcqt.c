@@ -78,6 +78,46 @@ static void gen_exp_tbl(int n)
 #define C_AIM(a, b) (Complex){ (a).re - (b).im, (a).im + (b).re }
 #define C_SIM(a, b) (Complex){ (a).re + (b).im, (a).im - (b).re }
 
+#if WASM_SIMD
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_add(Complex4 a, Complex4 b)
+{
+    return (Complex4){ a.re + b.re, a.im + b.im };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_sub(Complex4 a, Complex4 b)
+{
+    return (Complex4){ a.re - b.re, a.im - b.im };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_mul(Complex4 a, Complex4 b)
+{
+    return (Complex4){ a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_aim(Complex4 a, Complex4 b)
+{
+    return (Complex4){ a.re - b.im, a.im + b.re };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_sim(Complex4 a, Complex4 b)
+{
+    return (Complex4){ a.re + b.im, a.im - b.re };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_load_c(const Complex *v)
+{
+    float32x4 a = *(const float32x4 *)(v);
+    float32x4 b = *(const float32x4 *)(v+2);
+    return (Complex4){ __builtin_shufflevector(a, b, 0, 2, 4, 6), __builtin_shufflevector(a, b, 1, 3, 5, 7) };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void c4_store_c(Complex *v, Complex4 c)
+{
+    *(float32x4 *)(v) = __builtin_shufflevector(c.re, c.im, 0, 4, 1, 5);
+    *(float32x4 *)(v+2) = __builtin_shufflevector(c.re, c.im, 2, 6, 3, 7);
+}
+#endif
+
 #define FFT_CALC_FUNC(n, q)                                                     \
 static void fft_calc_ ## n(Complex *restrict v)                                 \
 {                                                                               \
@@ -121,8 +161,8 @@ static void fft_calc_ ## n(Complex *restrict v)                                 
     }                                                                           \
 }
 
-static inline void fft_calc_1(Complex *restrict v) { }
-static inline void fft_calc_2(Complex *restrict v)
+static ALWAYS_INLINE void fft_calc_1(Complex *restrict v) { }
+static ALWAYS_INLINE void fft_calc_2(Complex *restrict v)
 {
     Complex v0 = v[0], v1 = v[1];
     v[0] = C_ADD(v0, v1);
@@ -131,6 +171,7 @@ static inline void fft_calc_2(Complex *restrict v)
 
 FFT_CALC_FUNC(4, 1)
 FFT_CALC_FUNC(8, 2)
+#if !WASM_SIMD
 FFT_CALC_FUNC(16, 4)
 FFT_CALC_FUNC(32, 8)
 FFT_CALC_FUNC(64, 16)
@@ -143,6 +184,49 @@ FFT_CALC_FUNC(4096, 1024)
 FFT_CALC_FUNC(8192, 2048)
 FFT_CALC_FUNC(16384, 4096)
 FFT_CALC_FUNC(32768, 8192)
+#else
+#define FFT_CALC_FUNC_SIMD(n, q)                                                \
+static WASM_SIMD_FUNCTION void fft_calc_ ## n(Complex *restrict v)              \
+{                                                                               \
+    const Complex *restrict e2 = cqt.exp_tbl + 2*q;                             \
+    const Complex *restrict e3 = cqt.exp_tbl + 3*q;                             \
+    const Complex *restrict e1 = cqt.exp_tbl + 4*q;                             \
+    Complex4 v0, v1, v2, v3;                                                    \
+    Complex4 a02, a13, s02, s13;                                                \
+                                                                                \
+    fft_calc_ ## q(v);                                                          \
+    fft_calc_ ## q(q+v);                                                        \
+    fft_calc_ ## q(2*q+v);                                                      \
+    fft_calc_ ## q(3*q+v);                                                      \
+                                                                                \
+    for (int x = 0; x < q; x += 4) {                                            \
+        v0 = c4_load_c(v+x);                                                    \
+        v2 = c4_mul(c4_load_c(e2+x), c4_load_c(v+q+x)); /* bit reversed */      \
+        v1 = c4_mul(c4_load_c(e1+x), c4_load_c(v+2*q+x));                       \
+        v3 = c4_mul(c4_load_c(e3+x), c4_load_c(v+3*q+x));                       \
+        a02 = c4_add(v0, v2);                                                   \
+        s02 = c4_sub(v0, v2);                                                   \
+        a13 = c4_add(v1, v3);                                                   \
+        s13 = c4_sub(v1, v3);                                                   \
+        c4_store_c(v+x, c4_add(a02, a13));                                      \
+        c4_store_c(v+q+x, c4_sim(s02, s13));                                    \
+        c4_store_c(v+2*q+x, c4_sub(a02, a13));                                  \
+        c4_store_c(v+3*q+x, c4_aim(s02, s13));                                  \
+    }                                                                           \
+}
+FFT_CALC_FUNC_SIMD(16, 4)
+FFT_CALC_FUNC_SIMD(32, 8)
+FFT_CALC_FUNC_SIMD(64, 16)
+FFT_CALC_FUNC_SIMD(128, 32)
+FFT_CALC_FUNC_SIMD(256, 64)
+FFT_CALC_FUNC_SIMD(512, 128)
+FFT_CALC_FUNC_SIMD(1024, 256)
+FFT_CALC_FUNC_SIMD(2048, 512)
+FFT_CALC_FUNC_SIMD(4096, 1024)
+FFT_CALC_FUNC_SIMD(8192, 2048)
+FFT_CALC_FUNC_SIMD(16384, 4096)
+FFT_CALC_FUNC_SIMD(32768, 8192)
+#endif
 
 static void fft_calc(Complex *restrict v, int n)
 {
