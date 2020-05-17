@@ -95,6 +95,22 @@
         }
     };
 
+    let invalid_func = function() {
+        throw new Error("ShowCQT is not initialized");
+    }
+
+    let cqt_uninit = function(cqt) {
+        cqt.fft_size = 0;
+        cqt.width = 0;
+        cqt.inputs = null;
+        cqt.output = null;
+        cqt.calc = invalid_func;
+        cqt.render_line_alpha = invalid_func;
+        cqt.render_line_opaque = invalid_func;
+        cqt.set_height = invalid_func;
+        cqt.set_volume = invalid_func;
+    }
+
     var ShowCQT = {
         instantiate: async function(opt) {
             var instance = null;
@@ -115,26 +131,28 @@
             }
             var exports = instance.exports;
             var buffer = exports.memory.buffer;
-            return {
-                fft_size: 0,
-                width: 0,
+
+            var retval = {
                 init: function(rate, width, height, bar_v, sono_v, supersampling) {
-                    this.width = width;
+                    cqt_uninit(this);
                     this.fft_size = exports.init(rate, width, height, bar_v, sono_v, supersampling);
                     if (!this.fft_size)
                         throw new Error("ShowCQT init: cannot initialize ShowCQT");
+                    this.width = width;
                     this.inputs = [
                         new Float32Array(buffer, exports.get_input_array(0), this.fft_size),
                         new Float32Array(buffer, exports.get_input_array(1), this.fft_size)
                     ];
                     this.output = new Uint8ClampedArray(buffer, exports.get_output_array(), this.width * 4);
-                },
-                calc: exports.calc,
-                render_line_alpha: exports.render_line_alpha,
-                render_line_opaque: exports.render_line_opaque,
-                set_volume: exports.set_volume,
-                set_height: exports.set_height
-            }
+                    this.calc = exports.calc;
+                    this.render_line_alpha = exports.render_line_alpha;
+                    this.render_line_opaque = exports.render_line_opaque;
+                    this.set_height = exports.set_height;
+                    this.set_volume = exports.set_volume;
+                }
+            };
+            cqt_uninit(retval);
+            return retval;
         }
     };
 }
