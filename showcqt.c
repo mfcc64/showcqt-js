@@ -121,6 +121,20 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION void c4_store_c(Complex *v, Complex4 c)
     *(float32x4 *)(v) = __builtin_shufflevector(c.re, c.im, 0, 4, 1, 5);
     *(float32x4 *)(v+2) = __builtin_shufflevector(c.re, c.im, 2, 6, 3, 7);
 }
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_load_uc(const Complex *v)
+{
+    float32x4 a = *(const float32x4u *)(v);
+    float32x4 b = *(const float32x4u *)(v+2);
+    return (Complex4){ __builtin_shufflevector(a, b, 0, 2, 4, 6), __builtin_shufflevector(a, b, 1, 3, 5, 7) };
+}
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_load_uc_reverse(const Complex *v)
+{
+    float32x4 a = *(const float32x4u *)(v);
+    float32x4 b = *(const float32x4u *)(v+2);
+    return (Complex4){ __builtin_shufflevector(b, a, 2, 0, 6, 4), __builtin_shufflevector(b, a, 3, 1, 7, 5) };
+}
 #endif
 
 #define FFT_CALC_FUNC(n, q)                                                     \
@@ -294,25 +308,85 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
         int start = ceil(center - 0.5*flen);
         int end = floor(center + 0.5*flen);
         int len = end - start + 1;
+        len = WASM_SIMD ? 4 * ceil(len * 0.25) : len;
 
         if (idx + len + 1000 > MAX_KERNEL_SIZE)
             return 0;
         cqt.kernel_index[f].len = len;
         cqt.kernel_index[f].start = start;
 
-        for (int x = start; x <= end; x++) {
+        for (int x = start; x < start + len; x++) {
+            if (x > end) {
+                cqt.kernel[idx+x-start] = 0;
+                continue;
+            }
             int sign = (x & 1) ? (-1) : 1;
             double y = 2.0 * M_PI * (x - center) * (1.0 / flen);
             double w = 0.355768 + 0.487396 * cos(y) + 0.144232 * cos(2*y) + 0.012604 * cos(3*y);
             w *= sign * (1.0/cqt.fft_size);
             cqt.kernel[idx+x-start] = w;
         }
+
         idx += len;
     }
     return cqt.fft_size;
 }
 
-WASM_EXPORT void calc(void)
+#if !WASM_SIMD
+static Complex cqt_calc(const float *kernel, int start, int len)
+{
+    Complex a = { 0, 0 }, b = { 0, 0 };
+
+    for (int m = 0, i = start, j = cqt.fft_size - start; m < len; m++, i++, j--) {
+        float u = kernel[m];
+        a.re += u * cqt.fft_buf[i].re;
+        a.im += u * cqt.fft_buf[i].im;
+        b.re += u * cqt.fft_buf[j].re;
+        b.im += u * cqt.fft_buf[j].im;
+    }
+
+    Complex v0 = { a.re + b.re, a.im - b.im };
+    Complex v1 = { b.im + a.im, b.re - a.re };
+    float r0 = v0.re*v0.re + v0.im*v0.im;
+    float r1 = v1.re*v1.re + v1.im*v1.im;
+    return (Complex){ r0, r1 };
+}
+#else
+static WASM_SIMD_FUNCTION Complex cqt_calc(const float *kernel, int start, int len)
+{
+    Complex4 a = { { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };
+    Complex4 b = a;
+
+    for (int m = 0, i = start, j = cqt.fft_size - start - 3; m < len; m += 4, i += 4, j -= 4) {
+        float32x4 u = *(const float32x4 *)(kernel + m);
+        Complex4 vi = c4_load_uc(cqt.fft_buf + i);
+        Complex4 vj = c4_load_uc_reverse(cqt.fft_buf + j);
+        a.re += u * vi.re;
+        a.im += u * vi.im;
+        b.re += u * vj.re;
+        b.im += u * vj.im;
+    }
+
+    Complex4 v0 = { a.re + b.re, a.im - b.im };
+    Complex4 v1 = { b.im + a.im, b.re - a.re };
+    float32x4 v0a = __builtin_shufflevector(v0.re, v0.im, 0, 2, 4, 6);
+    float32x4 v0b = __builtin_shufflevector(v0.re, v0.im, 1, 3, 5, 7);
+    float32x4 v0c = v0a + v0b;
+    float32x4 v1a = __builtin_shufflevector(v1.re, v1.im, 0, 2, 4, 6);
+    float32x4 v1b = __builtin_shufflevector(v1.re, v1.im, 1, 3, 5, 7);
+    float32x4 v1c = v1a + v1b;
+    float32x4 v2a = __builtin_shufflevector(v0c, v1c, 0, 2, 4, 6);
+    float32x4 v2b = __builtin_shufflevector(v0c, v1c, 1, 3, 5, 7);
+    float32x4 v2c = v2a + v2b;
+    v2c *= v2c;
+    float32x4 v3a = __builtin_shufflevector(v2c, v2c, 0, 2, 4, 6);
+    float32x4 v3b = __builtin_shufflevector(v2c, v2c, 1, 3, 4, 6);
+    float32x4 v3c = v3a + v3b;
+    return (Complex){ v3c[0], v3c[1] };
+}
+#endif
+
+WASM_EXPORT WASM_SIMD_FUNCTION void calc(void)
 {
     int fft_size_h = cqt.fft_size >> 1;
     int fft_size_q = cqt.fft_size >> 2;
@@ -344,25 +418,13 @@ WASM_EXPORT void calc(void)
             cqt.color_buf[x] = (ColorF){0,0,0,0};
             continue;
         }
-        Complex a = {0,0}, b = {0,0};
-        for (int y = 0; y < len; y++) {
-            int i = start + y;
-            int j = cqt.fft_size - i;
-            float u = cqt.kernel[m+y];
-            a.re += u * cqt.fft_buf[i].re;
-            a.im += u * cqt.fft_buf[i].im;
-            b.re += u * cqt.fft_buf[j].re;
-            b.im += u * cqt.fft_buf[j].im;
-        }
-        Complex v0 = { a.re + b.re, a.im - b.im };
-        Complex v1 = { b.im + a.im, b.re - a.re };
-        float r0 = v0.re*v0.re + v0.im*v0.im;
-        float r1 = v1.re*v1.re + v1.im*v1.im;
 
-        cqt.color_buf[x].r = sqrtf(cqt.sono_v * sqrtf(r0));
-        cqt.color_buf[x].g = sqrtf(cqt.sono_v * sqrtf(0.5f * (r0 + r1)));
-        cqt.color_buf[x].b = sqrtf(cqt.sono_v * sqrtf(r1));
-        cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r0 + r1));
+        Complex r = cqt_calc(cqt.kernel + m, start, len);
+
+        cqt.color_buf[x].r = sqrtf(cqt.sono_v * sqrtf(r.re));
+        cqt.color_buf[x].g = sqrtf(cqt.sono_v * sqrtf(0.5f * (r.re + r.im)));
+        cqt.color_buf[x].b = sqrtf(cqt.sono_v * sqrtf(r.im));
+        cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r.re + r.im));
 
         m += len;
     }
