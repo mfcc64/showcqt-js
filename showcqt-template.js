@@ -36,14 +36,15 @@
  * //     If supersampling is true, the actual transform will be twice the width.
  * var rate = audio_ctx.sampleRate;
  * var width = canvas.width;
- * var height = canvas.height;
+ * var height = canvas.height - 1;
  * var bar_v = 15;
  * var sono_v = 25;
+ * var supersampling = true;
  * cqt.init(rate, width, height, bar_v, sono_v, supersampling);
  *
  * // Change height at runtime.
  * height = 256;
- * cqt.set_height(height);
+ * cqt.set_height(height - 1);
  *
  * // Change volume (bar height and brigthness) at runtime.
  * bar_v = 10;
@@ -59,6 +60,27 @@
  *     analyser_left.getFloatTimeDomainData(cqt.inputs[0]);
  *     analyser_right.getFloatTimeDomainData(cqt.inputs[1]);
  *     cqt.calc();
+ *
+ *     // Edit temporary color buffer. The array is Float32Array consisting of interleaved red, green, blue, and height channel.
+ *     // The buffer is only valid after cqt.calc() and before cqt.render_line_*().
+ *     // The color range is from 0.0 to 1.0 but it hasn't been clamped to the range. It may contain values greater than 1.0.
+ *     // The initial equations of the colors and the height:
+ *     // red    = sqrt(sono_v * amplitude_left);
+ *     // green  = sqrt(sono_v * sqrt(average(sqr(amplitude_left), sqr(amplitude_right))));
+ *     // blue   = sqrt(sono_v * amplitude_right);
+ *     // height = bar_v * sqrt(average(sqr(amplitude_left), sqr(amplitude_right)));
+ *     // You may edit the temporary color buffer if you want to change color scheme for example.
+ *     for (let x = 0; x < cqt.width * 4; x += 4) {
+ *         let r = cqt.color[x + 0];
+ *         let g = cqt.color[x + 1];
+ *         let b = cqt.color[x + 2];
+ *         let h = cqt.color[x + 3];
+ *         cqt.color[x + 0] = g;
+ *         cqt.color[x + 1] = b;
+ *         cqt.color[x + 2] = r;
+ *         cqt.color[x + 3] = Math.sqrt(h);
+ *     }
+ *
  *     for (let y = 0; y < height; y++) {
  *         // Render line, result is in cqt.output.
  *         // equal to cqt.render_line_opaque(y)
