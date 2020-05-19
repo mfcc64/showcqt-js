@@ -16,6 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/* https://github.com/mfcc64/showcqt-js */
 /* Audio visualization based on showcqt mpv/ffmpeg audio visualization */
 /* See https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/avf_showcqt.c */
 /* The output frequency range is fixed between E0 - 50 cents and E10 - 50 cents. */
