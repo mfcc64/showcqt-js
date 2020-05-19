@@ -12,7 +12,6 @@
     }
 
     let benchmark = async function() {
-        const rate = 48000;
         const bench_count = 1000;
         var result = document.getElementById("result");
         var bottom = document.getElementById("bottom");
@@ -28,75 +27,78 @@
         ];
         
         for (let width = 333; width <= 3330/2; width += 111) {
-            for (let height = 111; height <= width; height += 111) {
-                for (let multi = 0; multi <= 1; multi++) {
-                    for (let n = 0; cqt[n]; n++)
-                        cqt[n].init(rate, width, height - 1, 20, 30, multi);
+            for (let height = width/3; height < width; height *= 2) {
+                for (let rate of [8000, 11025, 22050, 24000, 44100, 48000, 88200, 96000]) {
+                    for (let multi = 0; multi <= 1; multi++) {
+                        for (let n = 0; cqt[n]; n++)
+                            cqt[n].init(rate, width, height - 1, 20, 30, multi);
 
-                    for (let x = 0; x < cqt[0].fft_size; x++) {
-                        cqt[0].inputs[0][x] = 0.3 * Math.sin(0.001 * x * x) +
-                            0.2 * Math.cos(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
-                        cqt[0].inputs[1][x] = 0.2 * Math.cos(0.001 * x * x) +
-                            0.3 * Math.sin(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
-                    }
-
-                    for (let n = 1; cqt[n]; n++) {
                         for (let x = 0; x < cqt[0].fft_size; x++) {
-                            cqt[n].inputs[0][x] = cqt[0].inputs[0][x];
-                            cqt[n].inputs[1][x] = cqt[0].inputs[1][x];
-                        }
-                    }
-                    cqt[0].calc();
-                    
-                    for (let n = 0; cqt[n]; n++) {
-                        let calc_time = 0;
-                        let render_time = 0;
-                        let total_time = 0;
-                        let stddev = 0;
-                        let maxdiff = 0;
-
-                        for (let m = 0; m < bench_count; m++) {
-                            let t0 = performance.now();
-                            cqt[n].calc();
-                            let t1 = performance.now();
-                            for (let y = 0; y < height; y++)
-                                cqt[n].render_line_alpha(y, y % 256);
-                            let t2 = performance.now();
-                            calc_time += t1 - t0;
-                            render_time += t2 - t1;
-                            total_time += t2 - t0;
-                            if (m % 10 == 0)
-                                await sleep(1);
+                            cqt[0].inputs[0][x] = 0.3 * Math.sin(0.001 * x * x) +
+                                0.2 * Math.cos(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
+                            cqt[0].inputs[1][x] = 0.2 * Math.cos(0.001 * x * x) +
+                                0.3 * Math.sin(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
                         }
 
-                        for (let y = 0; y < height && n; y++) {
-                            cqt[n].render_line_alpha(y, y % 256);
-                            cqt[0].render_line_alpha(y, y % 256);
-                            for (let x = 0; x < 4 * width; x++) {
-                                let diff = Math.abs(cqt[n].output[x] - cqt[0].output[x]);
-                                maxdiff = Math.max(maxdiff, diff);
-                                stddev += diff * diff;
+                        for (let n = 1; cqt[n]; n++) {
+                            for (let x = 0; x < cqt[0].fft_size; x++) {
+                                cqt[n].inputs[0][x] = cqt[0].inputs[0][x];
+                                cqt[n].inputs[1][x] = cqt[0].inputs[1][x];
                             }
                         }
-                        stddev = Math.sqrt(stddev / (width * height * 4));
-                        var str = "name = " + pad_string(label[n], 10) +
-                                  ", w = " + pad_string(width, 4) +
-                                  ", h = " + pad_string(height, 4) +
-                                  ", m = " + multi +
-                                  ", calc = " + pad_string(Math.round(calc_time / bench_count * 1000), 7) + " us" +
-                                  ", render = " + pad_string(Math.round(render_time / bench_count * 1000), 7) + " us" +
-                                  ", total = " + pad_string(Math.round(total_time / bench_count * 1000), 7) + " us" +
-                                  ", maxdiff = " + pad_string(maxdiff, 3) +
-                                  ", stddev = " + stddev + "\n";
-                        result.textContent += str;
-                        bottom.scrollIntoView();
-                        await sleep(10);
+                        cqt[0].calc();
+
+                        for (let n = 0; cqt[n]; n++) {
+                            let calc_time = 0;
+                            let render_time = 0;
+                            let total_time = 0;
+                            let stddev = 0;
+                            let maxdiff = 0;
+
+                            for (let m = 0; m < bench_count; m++) {
+                                let t0 = performance.now();
+                                cqt[n].calc();
+                                let t1 = performance.now();
+                                for (let y = 0; y < height; y++)
+                                    cqt[n].render_line_alpha(y, y % 256);
+                                let t2 = performance.now();
+                                calc_time += t1 - t0;
+                                render_time += t2 - t1;
+                                total_time += t2 - t0;
+                                if (m % 10 == 0)
+                                    await sleep(1);
+                            }
+
+                            for (let y = 0; y < height && n; y++) {
+                                cqt[n].render_line_alpha(y, y % 256);
+                                cqt[0].render_line_alpha(y, y % 256);
+                                for (let x = 0; x < 4 * width; x++) {
+                                    let diff = Math.abs(cqt[n].output[x] - cqt[0].output[x]);
+                                    maxdiff = Math.max(maxdiff, diff);
+                                    stddev += diff * diff;
+                                }
+                            }
+                            stddev = Math.sqrt(stddev / (width * height * 4));
+                            var str = "name = " + pad_string(label[n], 10) +
+                                    ", w = " + pad_string(width, 4) +
+                                    ", h = " + pad_string(height, 4) +
+                                    ", r = " + pad_string(rate, 5) +
+                                    ", m = " + multi +
+                                    ", calc = " + pad_string(Math.round(calc_time / bench_count * 1000), 7) + " us" +
+                                    ", render = " + pad_string(Math.round(render_time / bench_count * 1000), 7) + " us" +
+                                    ", total = " + pad_string(Math.round(total_time / bench_count * 1000), 7) + " us" +
+                                    ", maxdiff = " + pad_string(maxdiff, 3) +
+                                    ", stddev = " + stddev + "\n";
+                            result.textContent += str;
+                            bottom.scrollIntoView();
+                            await sleep(10);
+                        }
+                        result.textContent += "---------------------------------------------------------------" +
+                            "-------------------------------------------------------------------------------\n";
                     }
-                    result.textContent += "---------------------------------------------------------------" +
-                        "--------------------------------------------------------------------\n";
                 }
                 result.textContent += "---------------------------------------------------------------" +
-                    "--------------------------------------------------------------------\n";
+                    "-------------------------------------------------------------------------------\n";
             }
         }
     }
