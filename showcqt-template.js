@@ -107,8 +107,8 @@
         return buf;
     }
 
-    let wasm_module_promise = WebAssembly.compile(decode64(wasm_embedded_base64));
-    let wasm_simd_module_promise = WebAssembly.compile(decode64(wasm_simd_embedded_base64));
+    let wasm_module_promise = null;
+    let wasm_simd_module_promise = null;
     let wasm_imports = {
         env: {
             cos: Math.cos,
@@ -143,6 +143,8 @@
                 simd = opt.simd;
             if (simd) {
                 try {
+                    if (!wasm_simd_module_promise)
+                        wasm_simd_module_promise = WebAssembly.compile(decode64(wasm_simd_embedded_base64));
                     instance = await WebAssembly.instantiate(await wasm_simd_module_promise, wasm_imports);
                     console.log("ShowCQT: SIMD is enabled");
                 } catch(e) {
@@ -150,6 +152,8 @@
                 }
             }
             if (!instance) {
+                if (!wasm_module_promise)
+                    wasm_module_promise = WebAssembly.compile(decode64(wasm_embedded_base64));
                 instance = await WebAssembly.instantiate(await wasm_module_promise, wasm_imports);
                 console.log("ShowCQT: SIMD is disabled");
             }
