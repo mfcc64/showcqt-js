@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 #define WASM_EXPORT extern __attribute__((__visibility__("default")))
-#define WASM_IMPORT extern
+#define WASM_IMPORT extern __attribute__((__nothrow__))
 #define DECLARE_ALIGNED(n) __attribute__((__aligned__(n)))
 #define ALWAYS_INLINE __inline__ __attribute__((__always_inline__, __nodebug__))
 
