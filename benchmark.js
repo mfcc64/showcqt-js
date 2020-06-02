@@ -12,7 +12,7 @@
     }
 
     let benchmark = async function() {
-        const bench_count = 1000;
+        const bench_count = 100;
         var result = document.getElementById("result");
         var bottom = document.getElementById("bottom");
         var cqt = [
