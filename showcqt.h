@@ -81,11 +81,6 @@ typedef struct ColorF4 {
 } ColorF4;
 #endif
 
-typedef union Kernel {
-    float f;
-    int   i;
-} Kernel;
-
 typedef struct KernelIndex {
     int len;
     int start;
