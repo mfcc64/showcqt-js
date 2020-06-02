@@ -62,10 +62,6 @@ typedef struct Complex {
     float re, im;
 } Complex;
 
-typedef struct Color {
-    uint8_t r, g, b, a;
-} Color;
-
 typedef struct ColorF {
     float r, g, b, h;
 } ColorF;
@@ -98,7 +94,7 @@ typedef struct KernelIndex {
 typedef struct ShowCQT {
     /* args */
     float       input[2][MAX_FFT_SIZE];
-    Color       output[MAX_WIDTH];
+    unsigned    output[MAX_WIDTH];
 
     /* tables */
     Complex     exp_tbl[MAX_FFT_SIZE+MAX_FFT_SIZE/4];

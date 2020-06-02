@@ -29,7 +29,7 @@ WASM_EXPORT float *get_input_array(int index)
     return cqt.input[!!index];
 }
 
-WASM_EXPORT Color *get_output_array(void)
+WASM_EXPORT unsigned *get_output_array(void)
 {
     return cqt.output;
 }
@@ -480,19 +480,32 @@ WASM_EXPORT void render_line_alpha(int y, uint8_t alpha)
     if (cqt.prerender)
         prerender();
 
+    int a = ((int) alpha) << 24;
+
     if (y >= 0 && y < cqt.height) {
         float ht = (cqt.height - y) / (float) cqt.height;
         for (int x = 0; x < cqt.width; x++) {
             if (cqt.color_buf[x].h <= ht) {
-                cqt.output[x] = (Color) {0,0,0,alpha};
+                cqt.output[x] = a;
             } else {
                 float mul = (cqt.color_buf[x].h - ht) * cqt.rcp_h_buf[x];
-                cqt.output[x] = (Color){mul*cqt.color_buf[x].r, mul*cqt.color_buf[x].g, mul*cqt.color_buf[x].b, alpha};
+                int r = mul * cqt.color_buf[x].r;
+                int g = mul * cqt.color_buf[x].g;
+                int b = mul * cqt.color_buf[x].b;
+                g = g << 8;
+                b = b << 16;
+                cqt.output[x] = (r | g) | (b | a);
             }
         }
     } else {
-        for (int x = 0; x < cqt.width; x++)
-            cqt.output[x] = (Color){cqt.color_buf[x].r, cqt.color_buf[x].g, cqt.color_buf[x].b, alpha};
+        for (int x = 0; x < cqt.width; x++) {
+            int r = cqt.color_buf[x].r;
+            int g = cqt.color_buf[x].g;
+            int b = cqt.color_buf[x].b;
+            g = g << 8;
+            b = b << 16;
+            cqt.output[x] = (r | g) | (b | a);
+        }
     }
 }
 #else
