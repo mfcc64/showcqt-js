@@ -26,7 +26,7 @@
             "simd"
         ];
         
-        for (let width of [1920, 1600, 1366, 1280, 960, 683]) {
+        for (let width of [1920, 1600, 1366, 1280, 960, 683, 333]) {
             for (let height = Math.ceil(width/4); height < width; height *= 2) {
                 for (let rate of [96000, 88200, 48000, 44100, 24000, 22050, 11025, 8000]) {
                     for (let multi = 0; multi <= 1; multi++) {
