@@ -26,9 +26,9 @@
             "simd"
         ];
         
-        for (let width = 333; width <= 3330/2; width += 111) {
-            for (let height = width/3; height < width; height *= 2) {
-                for (let rate of [8000, 11025, 22050, 24000, 44100, 48000, 88200, 96000]) {
+        for (let width of [1920, 1600, 1366, 1280, 960, 683]) {
+            for (let height = Math.ceil(width/4); height < width; height *= 2) {
+                for (let rate of [96000, 88200, 48000, 44100, 24000, 22050, 11025, 8000]) {
                     for (let multi = 0; multi <= 1; multi++) {
                         for (let n = 0; cqt[n]; n++)
                             cqt[n].init(rate, width, height - 1, 20, 30, multi);
