@@ -5,11 +5,11 @@
         while (str.length < len)
             str = " " + str;
         return str;
-    }
+    };
 
     let sleep = function(ms) {
         return new Promise(function(resolve){ setTimeout(resolve, ms); });
-    }
+    };
 
     let benchmark = async function() {
         const bench_count = 100;
@@ -101,7 +101,7 @@
                     "-------------------------------------------------------------------------------\n";
             }
         }
-    }
+    };
 
     addEventListener("load", benchmark);
 }
