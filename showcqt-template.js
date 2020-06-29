@@ -105,7 +105,7 @@
         for (var k = 0; k < str.length; k++)
             buf[k] = str.charCodeAt(k);
         return buf;
-    }
+    };
 
     let wasm_module_promise = null;
     let wasm_simd_module_promise = null;
@@ -120,7 +120,7 @@
 
     let invalid_func = function() {
         throw new Error("ShowCQT is not initialized");
-    }
+    };
 
     let cqt_uninit = function(cqt) {
         cqt.fft_size = 0;
@@ -133,7 +133,7 @@
         cqt.render_line_opaque = invalid_func;
         cqt.set_height = invalid_func;
         cqt.set_volume = invalid_func;
-    }
+    };
 
     var ShowCQT = {
         instantiate: async function(opt) {
