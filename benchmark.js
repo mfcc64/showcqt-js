@@ -25,7 +25,13 @@
             "standard",
             "simd"
         ];
-        
+
+        let drand_state = 0;
+        let drand = function() {
+            drand_state = (drand_state * 8121 + 28411) % 134456;
+            return drand_state / 134456 - 0.5;
+        };
+
         for (let width of [1920, 1600, 1366, 1280, 960, 683, 333]) {
             for (let height = Math.ceil(width/4); height < width; height *= 2) {
                 for (let rate of [96000, 88200, 48000, 44100, 24000, 22050, 11025, 8000]) {
@@ -35,9 +41,9 @@
 
                         for (let x = 0; x < cqt[0].fft_size; x++) {
                             cqt[0].inputs[0][x] = 0.3 * Math.sin(0.001 * x * x) +
-                                0.2 * Math.cos(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
+                                0.2 * Math.cos(0.0001 * x * x * x) + 0.2 * drand();
                             cqt[0].inputs[1][x] = 0.2 * Math.cos(0.001 * x * x) +
-                                0.3 * Math.sin(0.0001 * x * x * x) + 0.1 * Math.random() - 0.1 * Math.random();
+                                0.3 * Math.sin(0.0001 * x * x * x) + 0.2 * drand();
                         }
 
                         for (let n = 1; cqt[n]; n++) {
