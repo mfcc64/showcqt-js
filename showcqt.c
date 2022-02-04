@@ -523,9 +523,7 @@ WASM_EXPORT WASM_SIMD_FUNCTION void render_line_alpha(int y, uint8_t alpha)
         for (int x = 0; x < cqt.aligned_width; x += 4) {
             ColorF4 color = *(ColorF4 *)(cqt.color_buf + x);
             int32x4 mask = color.h > ht;
-            int cmp = ((int32x4) __builtin_shufflevector((uint8x16) mask, (uint8x16) mask,
-                      0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1))[0];
-            if (cmp) {
+            if (__builtin_wasm_any_true_v128(mask)) {
                 float32x4 mul = (color.h - ht) * *(float32x4 *)(cqt.rcp_h_buf + x);
                 mul = (float32x4)((int32x4)mul & mask);
                 int32x4 r = __builtin_convertvector(mul * color.r, int32x4);
