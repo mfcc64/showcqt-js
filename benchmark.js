@@ -25,6 +25,12 @@
             "standard",
             "simd"
         ];
+        var grand_calc_time = [ 0, 0, 0 ];
+        var grand_render_time = [ 0, 0, 0 ];
+        var grand_total_time = [ 0, 0, 0 ];
+        var grand_stddev = [ 0, 0, 0 ];
+        var grand_maxdiff = [ 0, 0, 0 ];
+        var grand_count = [ 0, 0, 0 ];
 
         let drand_state = 0;
         let drand = function() {
@@ -96,6 +102,12 @@
                                     ", maxdiff = " + pad_string(maxdiff, 3) +
                                     ", stddev = " + stddev + "\n";
                             result.textContent += str;
+                            grand_calc_time[n] += calc_time / bench_count;
+                            grand_render_time[n] += render_time / bench_count;
+                            grand_total_time[n] += total_time / bench_count;
+                            grand_stddev[n] += stddev;
+                            grand_maxdiff[n] = Math.max(grand_maxdiff[n], maxdiff);
+                            grand_count[n]++;
                             bottom.scrollIntoView();
                             await sleep(10);
                         }
@@ -107,6 +119,20 @@
                     "-------------------------------------------------------------------------------\n";
             }
         }
+        for (let n = 0; cqt[n]; n++) {
+            var str = "name = " + pad_string(label[n], 10) +
+                    ", w = " + pad_string("avg", 4) +
+                    ", h = " + pad_string("avg", 4) +
+                    ", r = " + pad_string("avg", 5) +
+                    ", m = " + "-" +
+                    ", calc = " + pad_string(Math.round(grand_calc_time[n] / grand_count[n] * 1000), 7) + " us" +
+                    ", render = " + pad_string(Math.round(grand_render_time[n] / grand_count[n] * 1000), 7) + " us" +
+                    ", total = " + pad_string(Math.round(grand_total_time[n] / grand_count[n] * 1000), 7) + " us" +
+                    ", maxdiff = " + pad_string(grand_maxdiff[n], 3) +
+                    ", stddev = " + grand_stddev[n] / grand_count[n] + "\n";
+            result.textContent += str;
+        }
+        bottom.scrollIntoView();
     };
 
     addEventListener("load", benchmark);
