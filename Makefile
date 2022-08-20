@@ -1,8 +1,8 @@
 
-CC=clang-13
+CC=clang-14
 CFLAGS=-O2 -fvisibility=hidden --target=wasm32 -fno-vectorize
 SIMDFLAGS=-DWASM_SIMD=1
-LD=wasm-ld-13
+LD=wasm-ld-14
 LDFLAGS=--no-entry --export-dynamic --allow-undefined --gc-sections -O3 --lto-O3
 
 .PHONY: clean all
