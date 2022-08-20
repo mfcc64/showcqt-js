@@ -1023,6 +1023,6 @@ const wasm_simd_embedded_base64 = "" +
     };
 }
 
-ShowCQT.version = "1.1.0";
+ShowCQT.version = "1.1.1";
 export { ShowCQT };
 export default ShowCQT;
