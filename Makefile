@@ -6,7 +6,7 @@ LD=wasm-ld-14
 LDFLAGS=--no-entry --export-dynamic --allow-undefined --gc-sections -O3 --lto-O3
 
 .PHONY: clean all
-all: showcqt.js
+all: showcqt.js showcqt.mjs
 clean:
 	rm -frv *.o *.wasm showcqt.js
 
@@ -24,3 +24,8 @@ showcqt-simd.wasm: showcqt-simd.o
 
 showcqt.js: embed-base64 showcqt-template.js showcqt.wasm showcqt-simd.wasm
 	./embed-base64
+
+showcqt.mjs: showcqt.js
+	cat showcqt.js > showcqt.mjs
+	echo "export { ShowCQT };" >> showcqt.mjs
+	echo "export default ShowCQT;" >> showcqt.mjs
