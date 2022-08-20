@@ -1,0 +1,19 @@
+{
+  "name": "showcqt",
+  "version": "1.1.0",
+  "description": "ShowCQT (Constant Q Transform) audio visualization",
+  "main": "showcqt.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mfcc64/showcqt-js.git"
+  },
+  "author": "Muhammad Faiz",
+  "license": "LGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/mfcc64/showcqt-js/issues"
+  },
+  "homepage": "https://github.com/mfcc64/showcqt-js#readme"
+}
