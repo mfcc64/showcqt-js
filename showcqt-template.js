@@ -27,11 +27,15 @@
 //wasm_simd_embedded_base64
 
     let decode64 = function(b64) {
-        var str = atob(b64);
-        var buf = new Uint8Array(str.length);
-        for (var k = 0; k < str.length; k++)
-            buf[k] = str.charCodeAt(k);
-        return buf;
+        try {
+            var str = atob(b64);
+            var buf = new Uint8Array(str.length);
+            for (var k = 0; k < str.length; k++)
+                buf[k] = str.charCodeAt(k);
+            return buf;
+        } catch {
+            return Buffer.from(b64, "base64");
+        }
     };
 
     let wasm_module_promise = null;
