@@ -1,6 +1,6 @@
 # ShowCQT
 ShowCQT (Constant Q Transfrom) is a javascript audio visualization engine based on
-[ffmpeg showcqt filter](https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/avf_showcqt.c).
+[ffmpeg showcqt filter](https://ffmpeg.org/ffmpeg-filters.html#showcqt).
 
 ## Example
 ```js
