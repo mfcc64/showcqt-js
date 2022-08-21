@@ -2,7 +2,51 @@
 ShowCQT (Constant Q Transfrom) is a javascript audio visualization engine based on
 [ffmpeg showcqt filter](https://ffmpeg.org/ffmpeg-filters.html#showcqt).
 
-## Example
+## Projects
+- [Youtube Musical Spectrum](https://github.com/mfcc64/youtube-musical-spectrum) - a browser extension that uses showcqt-js.
+- [html5-showcqtbar](https://github.com/mfcc64/html5-showcqtbar) - an example github page that uses showcqt-js.
+
+## Usage
+### npm
+```
+npm i showcqt
+```
+```js
+// only ES module is available
+// use default import
+import ShowCQT from "showcqt";
+
+// use named import
+import { ShowCQT } from "showcqt";
+
+// use dynamic import
+const { ShowCQT } = await import("showcqt");
+```
+### <script>
+```html
+<!-- use a specific version -->
+<script src="https://cdn.jsdelivr.net/npm/showcqt@1.1.1/showcqt.js"></script>
+
+<!-- use the latest version -->
+<script src="https://cdn.jsdelivr.net/npm/showcqt/showcqt.js"></script>
+
+<!-- use local copy (only showcqt.js is required to be copied) -->
+<script src="showcqt.js"></script>
+```
+
+### ES module
+```js
+// use a specific version
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@1.1.1/showcqt.mjs";
+
+// use the latest version
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt/showcqt.mjs";
+
+// use local copy (only showcqt.mjs is required to be copied)
+import ShowCQT from "./showcqt.mjs";
+```
+
+### Example code
 ```js
 // The output frequency range is fixed between E0 - 50 cents and E10 - 50 cents.
 // Instantiate transform context. The context is uninitialized.
