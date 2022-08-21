@@ -25,7 +25,7 @@ const { ShowCQT } = await import("showcqt");
 ### <script>
 ```html
 <!-- use a specific version -->
-<script src="https://cdn.jsdelivr.net/npm/showcqt@1.1.1/showcqt.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/showcqt@1.1.2/showcqt.js"></script>
 
 <!-- use the latest version -->
 <script src="https://cdn.jsdelivr.net/npm/showcqt/showcqt.js"></script>
@@ -37,7 +37,7 @@ const { ShowCQT } = await import("showcqt");
 ### ES module
 ```js
 // use a specific version
-import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@1.1.1/showcqt.mjs";
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@1.1.2/showcqt.mjs";
 
 // use the latest version
 import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt/showcqt.mjs";
