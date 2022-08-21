@@ -78,7 +78,7 @@
                         wasm_simd_module_promise = WebAssembly.compile(decode64(wasm_simd_embedded_base64));
                     instance = await WebAssembly.instantiate(await wasm_simd_module_promise, wasm_imports);
                 } catch(e) {
-                    console.warn(e);
+                    console.warn(`Failed to instantiate SIMD code. ${e.name}: ${e.message}. Fallback to legacy code.`);
                 }
             }
             if (!instance) {
