@@ -70,6 +70,7 @@ typedef struct ColorF {
 typedef float   float32x4   __attribute__((__vector_size__(16), __aligned__(16)));
 typedef float   float32x4u  __attribute__((__vector_size__(16), __aligned__(4)));
 typedef int32_t int32x4     __attribute__((__vector_size__(16), __aligned__(16)));
+typedef uint32_t uint32x4   __attribute__((__vector_size__(16), __aligned__(16)));
 typedef uint8_t uint8x16    __attribute__((__vector_size__(16), __aligned__(16)));
 
 typedef struct Complex4 {

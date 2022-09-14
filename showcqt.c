@@ -480,7 +480,7 @@ WASM_EXPORT void render_line_alpha(int y, uint8_t alpha)
     if (cqt.prerender)
         prerender();
 
-    int a = ((int) alpha) << 24;
+    unsigned a = ((unsigned) alpha) << 24;
 
     if (y >= 0 && y < cqt.height) {
         float ht = (cqt.height - y) / (float) cqt.height;
@@ -514,7 +514,7 @@ WASM_EXPORT WASM_SIMD_FUNCTION void render_line_alpha(int y, uint8_t alpha)
     if (cqt.prerender)
         prerender();
 
-    int32x4 a = { alpha, alpha, alpha, alpha };
+    uint32x4 a = { alpha, alpha, alpha, alpha };
     a = a << 24;
 
     if (y >= 0 && y < cqt.height) {
