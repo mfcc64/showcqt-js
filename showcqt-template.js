@@ -64,6 +64,7 @@
         cqt.render_line_opaque = invalid_func;
         cqt.set_height = invalid_func;
         cqt.set_volume = invalid_func;
+        cqt.detect_silence = invalid_func;
     };
 
     var ShowCQT = {
@@ -107,6 +108,7 @@
                     this.render_line_opaque = exports.render_line_opaque;
                     this.set_height = exports.set_height;
                     this.set_volume = exports.set_volume;
+                    this.detect_silence = exports.detect_silence;
                 }
             };
             cqt_uninit(retval);

@@ -565,3 +565,25 @@ WASM_EXPORT void set_height(int height)
 {
     cqt.height = (height > MAX_HEIGHT) ? MAX_HEIGHT : (height > 1) ? height : 1;
 }
+
+#if WASM_SIMD
+WASM_EXPORT WASM_SIMD_FUNCTION float detect_silence(float threshold)
+{
+    float32x4 threshold4 = { threshold, threshold, threshold, threshold };
+    float32x4 *v0 = (float32x4 *) cqt.input[0];
+    float32x4 *v1 = (float32x4 *) cqt.input[1];
+    int len = cqt.fft_size >> 2;
+    for (int x = 0; x < len; x++)
+        if (__builtin_wasm_any_true_v128(v0[x] * v0[x] + v1[x] * v1[x] > threshold4))
+            return 0;
+    return 1;
+}
+#else
+WASM_EXPORT int detect_silence(float threshold)
+{
+    for (int x = 0; x < cqt.fft_size; x++)
+        if (cqt.input[0][x] * cqt.input[0][x] + cqt.input[1][x] * cqt.input[1][x] > threshold)
+            return 0;
+    return 1;
+}
+#endif
