@@ -67,19 +67,19 @@
                             let stddev = 0;
                             let maxdiff = 0;
 
-                            for (let m = 0; m < bench_count; m++) {
-                                let t0 = performance.now();
+                            for (let m = 0, t0 = performance.now(), delta = 0;
+                                 delta <= 50;
+                                 m++, delta = performance.now() - t0, calc_time = delta / m)
                                 cqt[n].calc();
-                                let t1 = performance.now();
+
+                            for (let m = 0, t0 = performance.now(), delta = 0;
+                                 delta <= 50;
+                                 m++, delta = performance.now() - t0, render_time = delta / m)
                                 for (let y = 0; y < height; y++)
                                     cqt[n].render_line_alpha(y, y % 256);
-                                let t2 = performance.now();
-                                calc_time += t1 - t0;
-                                render_time += t2 - t1;
-                                total_time += t2 - t0;
-                                if (m % 10 == 0)
-                                    await sleep(1);
-                            }
+
+                            total_time = calc_time + render_time;
+                            await sleep(1);
 
                             for (let y = 0; y < height && n; y++) {
                                 cqt[n].render_line_alpha(y, y % 256);
@@ -96,15 +96,15 @@
                                     ", h = " + pad_string(height, 4) +
                                     ", r = " + pad_string(rate, 5) +
                                     ", m = " + multi +
-                                    ", calc = " + pad_string(Math.round(calc_time / bench_count * 1000), 7) + " us" +
-                                    ", render = " + pad_string(Math.round(render_time / bench_count * 1000), 7) + " us" +
-                                    ", total = " + pad_string(Math.round(total_time / bench_count * 1000), 7) + " us" +
+                                    ", calc = " + pad_string(Math.round(calc_time * 1000), 7) + " us" +
+                                    ", render = " + pad_string(Math.round(render_time * 1000), 7) + " us" +
+                                    ", total = " + pad_string(Math.round(total_time * 1000), 7) + " us" +
                                     ", maxdiff = " + pad_string(maxdiff, 3) +
                                     ", stddev = " + stddev + "\n";
                             result.textContent += str;
-                            grand_calc_time[n] += calc_time / bench_count;
-                            grand_render_time[n] += render_time / bench_count;
-                            grand_total_time[n] += total_time / bench_count;
+                            grand_calc_time[n] += calc_time;
+                            grand_render_time[n] += render_time;
+                            grand_total_time[n] += total_time;
                             grand_stddev[n] += stddev;
                             grand_maxdiff[n] = Math.max(grand_maxdiff[n], maxdiff);
                             grand_count[n]++;
