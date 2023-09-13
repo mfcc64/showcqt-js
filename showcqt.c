@@ -137,47 +137,51 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_load_uc_reverse(const Comple
 }
 #endif
 
+static ALWAYS_INLINE void fft_butterfly(Complex *restrict v, unsigned n, unsigned q)
+{
+    const Complex *restrict e2 = cqt.exp_tbl + 2*q;
+    const Complex *restrict e3 = cqt.exp_tbl + 3*q;
+    const Complex *restrict e1 = cqt.exp_tbl + 4*q;
+    Complex v0, v1, v2, v3;
+    Complex a02, a13, s02, s13;
+
+    v0 = v[0];
+    v2 = v[q]; /* bit reversed */
+    v1 = v[2*q];
+    v3 = v[3*q];
+    a02 = C_ADD(v0, v2);
+    s02 = C_SUB(v0, v2);
+    a13 = C_ADD(v1, v3);
+    s13 = C_SUB(v1, v3);
+    v[0] = C_ADD(a02, a13);
+    v[q] = C_SIM(s02, s13);
+    v[2*q] = C_SUB(a02, a13);
+    v[3*q] = C_AIM(s02, s13);
+
+    for (int x = 1; x < q; x++) {
+        v0 = v[x];
+        v2 = C_MUL(e2[x], v[q+x]); /* bit reversed */
+        v1 = C_MUL(e1[x], v[2*q+x]);
+        v3 = C_MUL(e3[x], v[3*q+x]);
+        a02 = C_ADD(v0, v2);
+        s02 = C_SUB(v0, v2);
+        a13 = C_ADD(v1, v3);
+        s13 = C_SUB(v1, v3);
+        v[x] = C_ADD(a02, a13);
+        v[q+x] = C_SIM(s02, s13);
+        v[2*q+x] = C_SUB(a02, a13);
+        v[3*q+x] = C_AIM(s02, s13);
+    }
+}
+
 #define FFT_CALC_FUNC(n, q)                                                     \
 static void fft_calc_ ## n(Complex *restrict v)                                 \
 {                                                                               \
-    const Complex *restrict e2 = cqt.exp_tbl + 2*q;                             \
-    const Complex *restrict e3 = cqt.exp_tbl + 3*q;                             \
-    const Complex *restrict e1 = cqt.exp_tbl + 4*q;                             \
-    Complex v0, v1, v2, v3;                                                     \
-    Complex a02, a13, s02, s13;                                                 \
-                                                                                \
     fft_calc_ ## q(v);                                                          \
     fft_calc_ ## q(q+v);                                                        \
     fft_calc_ ## q(2*q+v);                                                      \
     fft_calc_ ## q(3*q+v);                                                      \
-                                                                                \
-    v0 = v[0];                                                                  \
-    v2 = v[q]; /* bit reversed */                                               \
-    v1 = v[2*q];                                                                \
-    v3 = v[3*q];                                                                \
-    a02 = C_ADD(v0, v2);                                                        \
-    s02 = C_SUB(v0, v2);                                                        \
-    a13 = C_ADD(v1, v3);                                                        \
-    s13 = C_SUB(v1, v3);                                                        \
-    v[0] = C_ADD(a02, a13);                                                     \
-    v[q] = C_SIM(s02, s13);                                                     \
-    v[2*q] = C_SUB(a02, a13);                                                   \
-    v[3*q] = C_AIM(s02, s13);                                                   \
-                                                                                \
-    for (int x = 1; x < q; x++) {                                               \
-        v0 = v[x];                                                              \
-        v2 = C_MUL(e2[x], v[q+x]); /* bit reversed */                           \
-        v1 = C_MUL(e1[x], v[2*q+x]);                                            \
-        v3 = C_MUL(e3[x], v[3*q+x]);                                            \
-        a02 = C_ADD(v0, v2);                                                    \
-        s02 = C_SUB(v0, v2);                                                    \
-        a13 = C_ADD(v1, v3);                                                    \
-        s13 = C_SUB(v1, v3);                                                    \
-        v[x] = C_ADD(a02, a13);                                                 \
-        v[q+x] = C_SIM(s02, s13);                                               \
-        v[2*q+x] = C_SUB(a02, a13);                                             \
-        v[3*q+x] = C_AIM(s02, s13);                                             \
-    }                                                                           \
+    fft_butterfly(v, n, q);                                                     \
 }
 
 static ALWAYS_INLINE void fft_calc_1(Complex *restrict v) { }
@@ -204,34 +208,39 @@ FFT_CALC_FUNC(8192, 2048)
 FFT_CALC_FUNC(16384, 4096)
 FFT_CALC_FUNC(32768, 8192)
 #else
+
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restrict v, unsigned n, unsigned q)
+{
+    const Complex *restrict e2 = cqt.exp_tbl + 2*q;
+    const Complex *restrict e3 = cqt.exp_tbl + 3*q;
+    const Complex *restrict e1 = cqt.exp_tbl + 4*q;
+    Complex4 v0, v1, v2, v3;
+    Complex4 a02, a13, s02, s13;
+
+    for (int x = 0; x < q; x += 4) {
+        v0 = c4_load_c(v+x);
+        v2 = c4_mul(c4_load_c(e2+x), c4_load_c(v+q+x)); /* bit reversed */
+        v1 = c4_mul(c4_load_c(e1+x), c4_load_c(v+2*q+x));
+        v3 = c4_mul(c4_load_c(e3+x), c4_load_c(v+3*q+x));
+        a02 = c4_add(v0, v2);
+        s02 = c4_sub(v0, v2);
+        a13 = c4_add(v1, v3);
+        s13 = c4_sub(v1, v3);
+        c4_store_c(v+x, c4_add(a02, a13));
+        c4_store_c(v+q+x, c4_sim(s02, s13));
+        c4_store_c(v+2*q+x, c4_sub(a02, a13));
+        c4_store_c(v+3*q+x, c4_aim(s02, s13));
+    }
+}
+
 #define FFT_CALC_FUNC_SIMD(n, q)                                                \
 static WASM_SIMD_FUNCTION void fft_calc_ ## n(Complex *restrict v)              \
 {                                                                               \
-    const Complex *restrict e2 = cqt.exp_tbl + 2*q;                             \
-    const Complex *restrict e3 = cqt.exp_tbl + 3*q;                             \
-    const Complex *restrict e1 = cqt.exp_tbl + 4*q;                             \
-    Complex4 v0, v1, v2, v3;                                                    \
-    Complex4 a02, a13, s02, s13;                                                \
-                                                                                \
     fft_calc_ ## q(v);                                                          \
     fft_calc_ ## q(q+v);                                                        \
     fft_calc_ ## q(2*q+v);                                                      \
     fft_calc_ ## q(3*q+v);                                                      \
-                                                                                \
-    for (int x = 0; x < q; x += 4) {                                            \
-        v0 = c4_load_c(v+x);                                                    \
-        v2 = c4_mul(c4_load_c(e2+x), c4_load_c(v+q+x)); /* bit reversed */      \
-        v1 = c4_mul(c4_load_c(e1+x), c4_load_c(v+2*q+x));                       \
-        v3 = c4_mul(c4_load_c(e3+x), c4_load_c(v+3*q+x));                       \
-        a02 = c4_add(v0, v2);                                                   \
-        s02 = c4_sub(v0, v2);                                                   \
-        a13 = c4_add(v1, v3);                                                   \
-        s13 = c4_sub(v1, v3);                                                   \
-        c4_store_c(v+x, c4_add(a02, a13));                                      \
-        c4_store_c(v+q+x, c4_sim(s02, s13));                                    \
-        c4_store_c(v+2*q+x, c4_sub(a02, a13));                                  \
-        c4_store_c(v+3*q+x, c4_aim(s02, s13));                                  \
-    }                                                                           \
+    fft_butterfly_simd(v, n, q);                                                \
 }
 FFT_CALC_FUNC_SIMD(16, 4)
 FFT_CALC_FUNC_SIMD(32, 8)
