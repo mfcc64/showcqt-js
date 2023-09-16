@@ -219,7 +219,7 @@ FFT_CALC_FUNC(16384, 4096)
 FFT_CALC_FUNC(32768, 8192)
 #else
 
-static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restrict v, unsigned n, unsigned q, int sh)
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restrict v, unsigned n, unsigned q, int sh, int shi)
 {
     const Complex *restrict e2 = cqt.exp_tbl + 2*q;
     const Complex *restrict e3 = cqt.exp_tbl + 3*q;
@@ -229,9 +229,9 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restric
 
     for (int x = 0; x < q; x += 4) {
         v0 = c4_load_c(v+x, q<=8);
-        v2 = c4_mul(c4_load_c(e2+x, 0), c4_load_c(v+q+x, q<=8)); /* bit reversed */
-        v1 = c4_mul(c4_load_c(e1+x, 0), c4_load_c(v+2*q+x, q<=8));
-        v3 = c4_mul(c4_load_c(e3+x, 0), c4_load_c(v+3*q+x, q<=8));
+        v2 = c4_mul(c4_load_c(e2+x, 0), c4_load_c(v+q+x, shi)); /* bit reversed */
+        v1 = c4_mul(c4_load_c(e1+x, 0), c4_load_c(v+2*q+x, shi));
+        v3 = c4_mul(c4_load_c(e3+x, 0), c4_load_c(v+3*q+x, shi));
         a02 = c4_add(v0, v2);
         s02 = c4_sub(v0, v2);
         a13 = c4_add(v1, v3);
@@ -250,7 +250,7 @@ static WASM_SIMD_FUNCTION void fft_calc_ ## n ## _ ## sh(Complex *restrict v)   
     fft_calc_ ## q ## _0(q+v);                                                  \
     fft_calc_ ## q ## _0(2*q+v);                                                \
     fft_calc_ ## q ## _0(3*q+v);                                                \
-    fft_butterfly_simd(v, n, q, sh);                                            \
+    fft_butterfly_simd(v, n, q, sh, q<=8);                                      \
 }
 
 #define fft_calc_4_0 fft_calc_4
