@@ -117,4 +117,4 @@
     };
 }
 
-ShowCQT.version = "1.2.0";
+ShowCQT.version = "1.2.1";

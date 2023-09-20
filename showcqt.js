@@ -736,4 +736,4 @@ const wasm_simd_embedded_base64 = "" +
     };
 }
 
-ShowCQT.version = "1.2.0";
+ShowCQT.version = "1.2.1";

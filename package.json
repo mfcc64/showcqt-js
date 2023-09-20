@@ -1,6 +1,6 @@
 {
   "name": "showcqt",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "ShowCQT (Constant Q Transform) audio visualization",
   "main": "showcqt.mjs",
   "scripts": {
