@@ -337,3 +337,6 @@ const wasm_embedded_base64 = "" +
         }
     };
 }
+
+export default ShowCQTRef;
+export {ShowCQTRef};
