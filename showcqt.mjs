@@ -105,6 +105,6 @@ var ShowCQT = {
     }
 };
 
-ShowCQT.version = "1.2.1";
+ShowCQT.version = "2.0.0";
 export { ShowCQT };
 export default ShowCQT;
