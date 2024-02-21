@@ -2,7 +2,7 @@
   "name": "showcqt",
   "version": "2.0.0-alpha",
   "description": "ShowCQT (Constant Q Transform) audio visualization",
-  "main": "showcqt.mjs",
+  "main": "showcqt-main.mjs",
   "scripts": {
     "test": "node ./benchmark.mjs"
   },
