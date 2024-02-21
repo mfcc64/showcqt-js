@@ -6,9 +6,9 @@ LD=wasm-ld-14
 LDFLAGS=--no-entry --export-dynamic --allow-undefined --gc-sections -O3 --lto-O3
 
 .PHONY: clean all
-all: showcqt.js showcqt.mjs
+all: showcqt.wasm showcqt-simd.wasm
 clean:
-	rm -frv *.o *.wasm showcqt.js
+	rm -frv *.o *.wasm
 
 showcqt.o: showcqt.c showcqt.h
 	$(CC) showcqt.c $(CFLAGS) -c -o showcqt.o
@@ -21,11 +21,3 @@ showcqt.wasm: showcqt.o
 
 showcqt-simd.wasm: showcqt-simd.o
 	$(LD) showcqt-simd.o $(LDFLAGS) -o showcqt-simd.wasm
-
-showcqt.js: embed-base64 showcqt-template.js showcqt.wasm showcqt-simd.wasm
-	./embed-base64
-
-showcqt.mjs: showcqt.js
-	cat showcqt.js > showcqt.mjs
-	echo "export { ShowCQT };" >> showcqt.mjs
-	echo "export default ShowCQT;" >> showcqt.mjs
