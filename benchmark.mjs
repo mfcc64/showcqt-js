@@ -4,7 +4,7 @@ var pad_string = (arg, len) => String(arg).padStart(len, " ");
 var separator = "----------------------------------------------------------------------------------------------------------------------------------------------";
 
 var [{ShowCQT}, {ShowCQTRef}] = await Promise.all([
-    import("./showcqt.mjs"),
+    import("./showcqt.mjs").catch(e => import("./showcqt-main.mjs")),
     import("./showcqt-ref.mjs")
 ]);
 
