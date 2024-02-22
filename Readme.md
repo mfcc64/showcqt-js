@@ -22,28 +22,17 @@ import { ShowCQT } from "showcqt";
 // use dynamic import
 const { ShowCQT } = await import("showcqt");
 ```
-### <script>
-```html
-<!-- use a specific version -->
-<script src="https://cdn.jsdelivr.net/npm/showcqt@1.1.2/showcqt.js"></script>
 
-<!-- use the latest version -->
-<script src="https://cdn.jsdelivr.net/npm/showcqt/showcqt.js"></script>
-
-<!-- use local copy (only showcqt.js is required to be copied) -->
-<script src="showcqt.js"></script>
-```
-
-### ES module
+### CDN
 ```js
 // use a specific version
-import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@1.1.2/showcqt.mjs";
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@2.0.0/showcqt.mjs";
 
-// use the latest version
-import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt/showcqt.mjs";
+// use a specific major version
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@2/showcqt.mjs";
 
-// use local copy (only showcqt.mjs is required to be copied)
-import ShowCQT from "./showcqt.mjs";
+// also on unpkg
+import ShowCQT from "https://unpkg.com/showcqt@2/showcqt.mjs";
 ```
 
 ### Example code
