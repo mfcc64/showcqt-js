@@ -89,7 +89,7 @@ typedef struct KernelIndex {
 
 typedef struct ShowCQT {
     /* args */
-    float       input[2][MAX_FFT_SIZE];
+    float       input[2][MAX_FFT_SIZE+64];
     unsigned    output[MAX_WIDTH];
 
     /* tables */
