@@ -228,7 +228,7 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restric
     Complex4 a02, a13, s02, s13;
 
     for (int x = 0; x < q; x += 4) {
-        v0 = c4_load_c(v+x, q<=8);
+        v0 = c4_load_c(v+x, shi);
         v2 = c4_mul(c4_load_c(e2+x, 0), c4_load_c(v+q+x, shi)); /* bit reversed */
         v1 = c4_mul(c4_load_c(e1+x, 0), c4_load_c(v+2*q+x, shi));
         v3 = c4_mul(c4_load_c(e3+x, 0), c4_load_c(v+3*q+x, shi));
