@@ -93,7 +93,7 @@ typedef struct ShowCQT {
     unsigned    output[MAX_WIDTH];
 
     /* tables */
-    Complex     exp_tbl[MAX_FFT_SIZE+MAX_FFT_SIZE/4];
+    Complex     exp_tbl[MAX_FFT_SIZE];
     int16_t     perm_tbl[MAX_FFT_SIZE/4];
     float       attack_tbl[MAX_FFT_SIZE/8];
     uint8_t     padding[1024];

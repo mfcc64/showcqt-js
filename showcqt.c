@@ -124,34 +124,31 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION Complex4 c4_load_uc_reverse(const Comple
 
 static WASM_SIMD_FUNCTION void gen_exp_tbl(int n)
 {
-    double mul;
-    for (int k = 2; k < n; k *= 2) {
-        mul = 2.0 * M_PI / k;
-        for (int x = 0; x < k/2; x++)
-            cqt.exp_tbl[k+x] = (Complex){ cos(mul*x), -sin(mul*x) };
-        mul = 3.0 * M_PI / k;
-        for (int x = 0; x < k/2; x++)
-            cqt.exp_tbl[k+k/2+x] = (Complex){ cos(mul*x), -sin(mul*x) };
+    for (int k = 16; k <= n; k *= 4) {
+        int q = k/4;
+        double mul;
+        for (int j = 1; j < 4; j++)
+            for (int x = 0; x < q; x++)
+                mul = 2 * j * M_PI / k, cqt.exp_tbl[j*q+x] = (Complex){ cos(mul*x), -sin(mul*x) };
+
+        if (k * 2 == n)
+            for (int x = 0; x < k; x++)
+                mul = M_PI / k, cqt.exp_tbl[k+x] = (Complex){ cos(mul*x), -sin(mul*x) };
     }
-    mul = 2.0 * M_PI / n;
-    for (int x = 0; x < n/4; x++)
-        cqt.exp_tbl[n+x] = (Complex){ cos(mul*x), -sin(mul*x) };
+
 #if WASM_SIMD
-    cqt.exp_tbl[0] = cqt.exp_tbl[8];
-    cqt.exp_tbl[1] = cqt.exp_tbl[9];
-    for (int x = 8; x < n + n/4; x+=4) {
+    for (int x = 4; x < n; x += 4) {
         Complex4 v = c4_load_c(cqt.exp_tbl+x, 1);
         c4_store_c(cqt.exp_tbl+x, v, 0);
     }
 #endif
 }
 
-
 static ALWAYS_INLINE void fft_butterfly(Complex *restrict v, unsigned n, unsigned q)
 {
     const Complex *restrict e2 = cqt.exp_tbl + 2*q;
     const Complex *restrict e3 = cqt.exp_tbl + 3*q;
-    const Complex *restrict e1 = cqt.exp_tbl + (WASM_SIMD && n == 8 ? 0 : 4*q);
+    const Complex *restrict e1 = cqt.exp_tbl + 1*q;
     Complex v0, v1, v2, v3;
     Complex a02, a13, s02, s13;
 
@@ -184,6 +181,22 @@ static ALWAYS_INLINE void fft_butterfly(Complex *restrict v, unsigned n, unsigne
     }
 }
 
+static ALWAYS_INLINE void fft_butterfly2(Complex *restrict v, unsigned n, unsigned h)
+{
+    const Complex *restrict e = cqt.exp_tbl + h;
+    Complex v0 = v[0], v1 = v[h];
+
+    v[0] = C_ADD(v0, v1);
+    v[h] = C_SUB(v0, v1);
+
+    for (int x = 1; x < h; x++) {
+        v0 = v[x];
+        v1 = C_MUL(e[x], v[h+x]);
+        v[x] = C_ADD(v0, v1);
+        v[h+x] = C_SUB(v0, v1);
+    }
+}
+
 #define FFT_CALC_FUNC(n, q)                                                     \
 static void fft_calc_ ## n(Complex *restrict v)                                 \
 {                                                                               \
@@ -194,44 +207,42 @@ static void fft_calc_ ## n(Complex *restrict v)                                 
     fft_butterfly(v, n, q);                                                     \
 }
 
-static ALWAYS_INLINE void fft_calc_1(Complex *restrict v) { }
-static ALWAYS_INLINE void fft_calc_2(Complex *restrict v)
-{
-    Complex v0 = v[0], v1 = v[1];
-    v[0] = C_ADD(v0, v1);
-    v[1] = C_SUB(v0, v1);
+#define FFT_CALC2_FUNC(n, h)                                                    \
+static void fft_calc_ ## n(Complex *restrict v)                                 \
+{                                                                               \
+    fft_calc_ ## h(v);                                                          \
+    fft_calc_ ## h(v+h);                                                        \
+    fft_butterfly2(v, n, h);                                                    \
 }
 
-FFT_CALC_FUNC(4, 1)
-FFT_CALC_FUNC(8, 2)
 #if !WASM_SIMD
+static ALWAYS_INLINE void fft_calc_1(Complex *restrict v) { }
+FFT_CALC_FUNC(4, 1)
 FFT_CALC_FUNC(16, 4)
-FFT_CALC_FUNC(32, 8)
 FFT_CALC_FUNC(64, 16)
-FFT_CALC_FUNC(128, 32)
 FFT_CALC_FUNC(256, 64)
-FFT_CALC_FUNC(512, 128)
 FFT_CALC_FUNC(1024, 256)
-FFT_CALC_FUNC(2048, 512)
 FFT_CALC_FUNC(4096, 1024)
-FFT_CALC_FUNC(8192, 2048)
 FFT_CALC_FUNC(16384, 4096)
-FFT_CALC_FUNC(32768, 8192)
+
+FFT_CALC2_FUNC(2048, 1024)
+FFT_CALC2_FUNC(8192, 4096)
+FFT_CALC2_FUNC(32768, 16384)
 #else
 
-static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restrict v, unsigned n, unsigned q, int sh, int shi)
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restrict v, unsigned n, unsigned q, int sh)
 {
     const Complex *restrict e2 = cqt.exp_tbl + 2*q;
     const Complex *restrict e3 = cqt.exp_tbl + 3*q;
-    const Complex *restrict e1 = cqt.exp_tbl + 4*q;
+    const Complex *restrict e1 = cqt.exp_tbl + 1*q;
     Complex4 v0, v1, v2, v3;
     Complex4 a02, a13, s02, s13;
 
     for (int x = 0; x < q; x += 4) {
-        v0 = c4_load_c(v+x, shi);
-        v2 = c4_mul(c4_load_c(e2+x, 0), c4_load_c(v+q+x, shi)); /* bit reversed */
-        v1 = c4_mul(c4_load_c(e1+x, 0), c4_load_c(v+2*q+x, shi));
-        v3 = c4_mul(c4_load_c(e3+x, 0), c4_load_c(v+3*q+x, shi));
+        v0 = c4_load_c(v+x, 0);
+        v2 = c4_mul(c4_load_c(e2+x, 0), c4_load_c(v+q+x, 0)); /* bit reversed */
+        v1 = c4_mul(c4_load_c(e1+x, 0), c4_load_c(v+2*q+x, 0));
+        v3 = c4_mul(c4_load_c(e3+x, 0), c4_load_c(v+3*q+x, 0));
         a02 = c4_add(v0, v2);
         s02 = c4_sub(v0, v2);
         a13 = c4_add(v1, v3);
@@ -243,6 +254,85 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly_simd(Complex *restric
     }
 }
 
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly2_simd(Complex *restrict v, unsigned n, unsigned h)
+{
+    const Complex *restrict e = cqt.exp_tbl + h;
+    Complex4 v0, v1;
+
+    for (int x = 0; x < h; x += 4) {
+        v0 = c4_load_c(v+x, 0);
+        v1 = c4_mul(c4_load_c(e+x, 0), c4_load_c(v+h+x, 0));
+        c4_store_c(v+x, c4_add(v0, v1), 1);
+        c4_store_c(v+h+x, c4_sub(v0, v1), 1);
+    }
+}
+
+static WASM_SIMD_FUNCTION void fft_calc_16_0(Complex *restrict v)
+{
+    const Complex *restrict e2 = cqt.exp_tbl + 2*4;
+    const Complex *restrict e3 = cqt.exp_tbl + 3*4;
+    const Complex *restrict e1 = cqt.exp_tbl + 1*4;
+    Complex4 v0, v1, v2, v3;
+    Complex4 a02, a13, s02, s13;
+
+    /* butterfly 4 */ {
+        float32x4 *vf = (float32x4 *) v;
+        float32x4 r0145 = __builtin_shufflevector(vf[0], vf[2], 0, 2, 4, 6);
+        float32x4 i0145 = __builtin_shufflevector(vf[0], vf[2], 1, 3, 5, 7);
+        float32x4 r2367 = __builtin_shufflevector(vf[1], vf[3], 0, 2, 4, 6);
+        float32x4 i2367 = __builtin_shufflevector(vf[1], vf[3], 1, 3, 5, 7);
+        float32x4 r89cd = __builtin_shufflevector(vf[4], vf[6], 0, 2, 4, 6);
+        float32x4 i89cd = __builtin_shufflevector(vf[4], vf[6], 1, 3, 5, 7);
+        float32x4 rabef = __builtin_shufflevector(vf[5], vf[7], 0, 2, 4, 6);
+        float32x4 iabef = __builtin_shufflevector(vf[5], vf[7], 1, 3, 5, 7);
+
+        v0 = (Complex4){__builtin_shufflevector(r0145, r89cd, 0, 2, 4, 6), __builtin_shufflevector(i0145, i89cd, 0, 2, 4, 6)};
+        v2 = (Complex4){__builtin_shufflevector(r0145, r89cd, 1, 3, 5, 7), __builtin_shufflevector(i0145, i89cd, 1, 3, 5, 7)};
+        v1 = (Complex4){__builtin_shufflevector(r2367, rabef, 0, 2, 4, 6), __builtin_shufflevector(i2367, iabef, 0, 2, 4, 6)};
+        v3 = (Complex4){__builtin_shufflevector(r2367, rabef, 1, 3, 5, 7), __builtin_shufflevector(i2367, iabef, 1, 3, 5, 7)};
+
+        a02 = c4_add(v0, v2);
+        s02 = c4_sub(v0, v2);
+        a13 = c4_add(v1, v3);
+        s13 = c4_sub(v1, v3);
+
+        v0 = c4_add(a02, a13); // 0,4,8,c
+        v1 = c4_sim(s02, s13); // 1,5,9,d
+        v2 = c4_sub(a02, a13); // 2,6,a,e
+        v3 = c4_aim(s02, s13); // 3,7,b,f
+
+        float32x4 r0819 = __builtin_shufflevector(v0.re, v1.re, 0, 2, 4, 6);
+        float32x4 r4c5d = __builtin_shufflevector(v0.re, v1.re, 1, 3, 5, 7);
+        float32x4 i0819 = __builtin_shufflevector(v0.im, v1.im, 0, 2, 4, 6);
+        float32x4 i4c5d = __builtin_shufflevector(v0.im, v1.im, 1, 3, 5, 7);
+        float32x4 r2a3b = __builtin_shufflevector(v2.re, v3.re, 0, 2, 4, 6);
+        float32x4 r6e7f = __builtin_shufflevector(v2.re, v3.re, 1, 3, 5, 7);
+        float32x4 i2a3b = __builtin_shufflevector(v2.im, v3.im, 0, 2, 4, 6);
+        float32x4 i6e7f = __builtin_shufflevector(v2.im, v3.im, 1, 3, 5, 7);
+
+        v0.re = __builtin_shufflevector(r0819, r2a3b, 0, 2, 4, 6);
+        v1.re = __builtin_shufflevector(r0819, r2a3b, 1, 3, 5, 7);
+        v2.re = __builtin_shufflevector(r4c5d, r6e7f, 0, 2, 4, 6);
+        v3.re = __builtin_shufflevector(r4c5d, r6e7f, 1, 3, 5, 7);
+        v0.im = __builtin_shufflevector(i0819, i2a3b, 0, 2, 4, 6);
+        v1.im = __builtin_shufflevector(i0819, i2a3b, 1, 3, 5, 7);
+        v2.im = __builtin_shufflevector(i4c5d, i6e7f, 0, 2, 4, 6);
+        v3.im = __builtin_shufflevector(i4c5d, i6e7f, 1, 3, 5, 7);
+    }
+
+    v2 = c4_mul(c4_load_c(e2, 0), v2); /* bit reversed */
+    v1 = c4_mul(c4_load_c(e1, 0), v1);
+    v3 = c4_mul(c4_load_c(e3, 0), v3);
+    a02 = c4_add(v0, v2);
+    s02 = c4_sub(v0, v2);
+    a13 = c4_add(v1, v3);
+    s13 = c4_sub(v1, v3);
+    c4_store_c(v, c4_add(a02, a13), 0);
+    c4_store_c(v+4, c4_sim(s02, s13), 0);
+    c4_store_c(v+2*4, c4_sub(a02, a13), 0);
+    c4_store_c(v+3*4, c4_aim(s02, s13), 0);
+}
+
 #define FFT_CALC_FUNC_SIMD(n, q, sh)                                            \
 static WASM_SIMD_FUNCTION void fft_calc_ ## n ## _ ## sh(Complex *restrict v)   \
 {                                                                               \
@@ -250,13 +340,18 @@ static WASM_SIMD_FUNCTION void fft_calc_ ## n ## _ ## sh(Complex *restrict v)   
     fft_calc_ ## q ## _0(q+v);                                                  \
     fft_calc_ ## q ## _0(2*q+v);                                                \
     fft_calc_ ## q ## _0(3*q+v);                                                \
-    fft_butterfly_simd(v, n, q, sh, q<=8);                                      \
+    fft_butterfly_simd(v, n, q, sh);                                            \
 }
 
-#define fft_calc_4_0 fft_calc_4
-#define fft_calc_8_0 fft_calc_8
+#define FFT_CALC2_FUNC_SIMD(n, h)                                               \
+static WASM_SIMD_FUNCTION void fft_calc_ ## n(Complex *restrict v)              \
+{                                                                               \
+    fft_calc_ ## h ## _0(v);                                                    \
+    fft_calc_ ## h ## _0(v+h);                                                    \
+    fft_butterfly2_simd(v, n, h);                                               \
+}
 
-FFT_CALC_FUNC_SIMD(16, 4, 0)
+static void fft_calc_8_0(Complex *restrict v) { }
 FFT_CALC_FUNC_SIMD(32, 8, 0)
 FFT_CALC_FUNC_SIMD(64, 16, 0)
 FFT_CALC_FUNC_SIMD(128, 32, 0)
@@ -266,20 +361,19 @@ FFT_CALC_FUNC_SIMD(1024, 256, 0)
 FFT_CALC_FUNC_SIMD(2048, 512, 0)
 FFT_CALC_FUNC_SIMD(4096, 1024, 0)
 FFT_CALC_FUNC_SIMD(8192, 2048, 0)
+FFT_CALC_FUNC_SIMD(16384, 4096, 0)
 
 FFT_CALC_FUNC_SIMD(1024, 256, 1)
-FFT_CALC_FUNC_SIMD(2048, 512, 1)
 FFT_CALC_FUNC_SIMD(4096, 1024, 1)
-FFT_CALC_FUNC_SIMD(8192, 2048, 1)
 FFT_CALC_FUNC_SIMD(16384, 4096, 1)
-FFT_CALC_FUNC_SIMD(32768, 8192, 1)
+
+FFT_CALC2_FUNC_SIMD(2048, 1024)
+FFT_CALC2_FUNC_SIMD(8192, 4096)
+FFT_CALC2_FUNC_SIMD(32768, 16384)
 
 #define fft_calc_1024 fft_calc_1024_1
-#define fft_calc_2048 fft_calc_2048_1
 #define fft_calc_4096 fft_calc_4096_1
-#define fft_calc_8192 fft_calc_8192_1
 #define fft_calc_16384 fft_calc_16384_1
-#define fft_calc_32768 fft_calc_32768_1
 #endif
 
 static void fft_calc(Complex *restrict v, int n)
