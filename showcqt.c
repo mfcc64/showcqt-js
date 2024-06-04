@@ -696,7 +696,7 @@ WASM_EXPORT void set_height(int height)
 }
 
 #if WASM_SIMD
-WASM_EXPORT WASM_SIMD_FUNCTION float detect_silence(float threshold)
+WASM_EXPORT WASM_SIMD_FUNCTION int detect_silence(float threshold)
 {
     float32x4 threshold4 = { threshold, threshold, threshold, threshold };
     float32x4 *v0 = (float32x4 *) cqt.input[0];
