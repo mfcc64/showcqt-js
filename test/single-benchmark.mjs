@@ -9,7 +9,7 @@ var height  = Number(argv[4]);
 var rate    = Number(argv[5]);
 var multi   = Number(argv[6]);
 
-benchmark(name, width, height, rate, multi);
+await benchmark(name, width, height, rate, multi);
 
 async function benchmark(name, width, height, rate, multi) {
     var cqt     = await (name == "reference" ? ShowCQTRef : ShowCQT).instantiate({simd: name == "simd"});
