@@ -4,8 +4,8 @@ var pad_string = (arg, len) => String(arg).padStart(len, " ");
 var separator = "----------------------------------------------------------------------------------------------------------------------------------------------";
 
 var [{ShowCQT}, {ShowCQTRef}] = await Promise.all([
-    import("./showcqt.mjs").catch(e => (console.warn("failed to load ./showcqt.mjs"), import("./showcqt-main.mjs"))),
-    import("./showcqt-ref.mjs")
+    import("../showcqt.mjs").catch(e => (console.warn("failed to load ./showcqt.mjs"), import("../showcqt-main.mjs"))),
+    import("../showcqt-ref.mjs")
 ]);
 
 var cqt = await Promise.all([
@@ -19,6 +19,12 @@ try {
     result = document.getElementById("result");
     bottom = document.getElementById("bottom");
 } catch (e) { }
+
+function print_log(str) {
+    console.log(str);
+    result?.insertAdjacentText("beforeend", str + "\n");
+    bottom?.scrollIntoView();
+}
 
 var label = [
     "reference",
@@ -101,23 +107,19 @@ for (let width of [1920, 1600, 1366, 1280, 960, 683, 333]) {
                             ", total = " + pad_string(Math.round(total_time * 1000), 7) + " us" +
                             ", maxdiff = " + pad_string(maxdiff, 3) +
                             ", stddev = " + stddev;
-                    console.log(str);
-                    if (result) result.textContent += str + "\n";
+                    print_log(str);
                     grand_calc_time[n] += calc_time;
                     grand_render_time[n] += render_time;
                     grand_total_time[n] += total_time;
                     grand_stddev[n] += stddev;
                     grand_maxdiff[n] = Math.max(grand_maxdiff[n], maxdiff);
                     grand_count[n]++;
-                    bottom?.scrollIntoView();
                     await sleep(10);
                 }
-                console.log(separator);
-                if (result) result.textContent += separator + "\n";
+                print_log(separator);
             }
         }
-        console.log(separator);
-        if (result) result.textContent += separator + "\n";
+        print_log(separator);
     }
 }
 
@@ -133,11 +135,9 @@ for (let n = 0; cqt[n]; n++) {
             ", total = " + pad_string(Math.round(grand_total_time[n] / grand_count[n] * 1000), 7) + " us" +
             ", maxdiff = " + pad_string(grand_maxdiff[n], 3) +
             ", stddev = " + grand_stddev[n] / grand_count[n];
-    console.log(str);
-    if (result) result.textContent += str + "\n";
+    print_log(str);
     max_maxdiff = Math.max(grand_maxdiff[n], max_maxdiff);
 }
-bottom?.scrollIntoView();
 
 if (max_maxdiff > 1)
     throw new Error("maxdiff > 1");

@@ -4,7 +4,7 @@
   "description": "ShowCQT (Constant Q Transform) audio visualization",
   "main": "showcqt-main.mjs",
   "scripts": {
-    "test": "node ./benchmark.mjs"
+    "test": "node ./test/benchmark.mjs"
   },
   "repository": {
     "type": "git",

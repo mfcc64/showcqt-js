@@ -1,6 +1,6 @@
 
-import ShowCQT from "./showcqt-main.mjs";
-import ShowCQTRef from "./showcqt-ref.mjs";
+import ShowCQT from "../showcqt-main.mjs";
+import ShowCQTRef from "../showcqt-ref.mjs";
 import {argv} from "node:process";
 
 var name    = argv[2];
