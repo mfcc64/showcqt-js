@@ -363,11 +363,9 @@ FFT_CALC_FUNC_SIMD(4096, 1024, 0)
 FFT_CALC_FUNC_SIMD(8192, 2048, 0)
 FFT_CALC_FUNC_SIMD(16384, 4096, 0)
 
-FFT_CALC_FUNC_SIMD(1024, 256, 1)
 FFT_CALC_FUNC_SIMD(4096, 1024, 1)
 FFT_CALC_FUNC_SIMD(16384, 4096, 1)
 
-FFT_CALC2_FUNC_SIMD(2048, 1024)
 FFT_CALC2_FUNC_SIMD(8192, 4096)
 FFT_CALC2_FUNC_SIMD(32768, 16384)
 
@@ -379,8 +377,6 @@ FFT_CALC2_FUNC_SIMD(32768, 16384)
 static void fft_calc(Complex *restrict v, int n)
 {
     switch (n) {
-        case 1024: fft_calc_1024(v); break;
-        case 2048: fft_calc_2048(v); break;
         case 4096: fft_calc_4096(v); break;
         case 8192: fft_calc_8192(v); break;
         case 16384: fft_calc_16384(v); break;
@@ -404,7 +400,7 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
         return 0;
 
     int bits = ceil(log(rate * 0.33)/ M_LN2);
-    if (bits > 20 || bits < 10)
+    if (bits > 20 || bits < 12)
         return 0;
     cqt.fft_size = 1 << bits;
     if (cqt.fft_size > MAX_FFT_SIZE)
