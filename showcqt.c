@@ -216,12 +216,19 @@ static void fft_calc_ ## n(Complex *restrict v)                                 
 }
 
 #if !WASM_SIMD
-static ALWAYS_INLINE void fft_calc_1(Complex *restrict v) { }
-FFT_CALC_FUNC(4, 1)
-FFT_CALC_FUNC(16, 4)
-FFT_CALC_FUNC(64, 16)
-FFT_CALC_FUNC(256, 64)
-FFT_CALC_FUNC(1024, 256)
+static void fft_calc_1024(Complex *restrict v)
+{
+    for (int k = 0; k < 1024; k += 4)
+        fft_butterfly(v+k, 4, 1);
+    for (int k = 0; k < 1024; k += 16)
+        fft_butterfly(v+k, 16, 4);
+    for (int k = 0; k < 1024; k += 64)
+        fft_butterfly(v+k, 64, 16);
+    for (int k = 0; k < 1024; k += 256)
+        fft_butterfly(v+k, 256, 64);
+    fft_butterfly(v, 1024, 256);
+}
+
 FFT_CALC_FUNC(4096, 1024)
 FFT_CALC_FUNC(16384, 4096)
 
@@ -266,7 +273,7 @@ static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_butterfly2_simd(Complex *restri
     }
 }
 
-static WASM_SIMD_FUNCTION void fft_calc_16_0(Complex *restrict v)
+static ALWAYS_INLINE WASM_SIMD_FUNCTION void fft_calc_16_0(Complex *restrict v)
 {
     const Complex *restrict e2 = cqt.exp_tbl + 2*4;
     const Complex *restrict e3 = cqt.exp_tbl + 3*4;
@@ -350,9 +357,17 @@ static WASM_SIMD_FUNCTION void fft_calc_ ## n(Complex *restrict v)              
     fft_butterfly2_simd(v, n, h);                                               \
 }
 
-FFT_CALC_FUNC_SIMD(64, 16, 0)
-FFT_CALC_FUNC_SIMD(256, 64, 0)
-FFT_CALC_FUNC_SIMD(1024, 256, 0)
+static WASM_SIMD_FUNCTION void fft_calc_1024_0(Complex *restrict v)
+{
+    for (int k = 0; k < 1024; k += 16)
+        fft_calc_16_0(v+k);
+    for (int k = 0; k < 1024; k += 64)
+        fft_butterfly_simd(v+k, 64, 16, 0);
+    for (int k = 0; k < 1024; k += 256)
+        fft_butterfly_simd(v+k, 256, 64, 0);
+    fft_butterfly_simd(v, 1024, 256, 0);
+}
+
 FFT_CALC_FUNC_SIMD(4096, 1024, 0)
 FFT_CALC_FUNC_SIMD(16384, 4096, 0)
 
