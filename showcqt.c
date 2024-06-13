@@ -386,6 +386,7 @@ static void fft_calc(Complex *restrict v, int n)
 
 WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v, int super)
 {
+    memory_expand(-1);
     if (height <= 0 || height > MAX_HEIGHT || width <= 0 || width > MAX_WIDTH)
         return 0;
 
@@ -415,6 +416,7 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
         cqt.attack_tbl[x] = 0.355768 + 0.487396 * cos(y) + 0.144232 * cos(2*y) + 0.012604 * cos(3*y);
     }
 
+    cqt.kernel = memory_expand(0);
     cqt.t_size = cqt.width * (1 + !!super);
     double log_base = log(20.01523126408007475);
     double log_end = log(20495.59681441799654);
@@ -434,9 +436,8 @@ WASM_EXPORT int init(int rate, int width, int height, float bar_v, float sono_v,
         int end = floor(center + 0.5*flen);
         int len = end - start + 1;
         len = WASM_SIMD ? 4 * ceil(len * 0.25) : len;
+        memory_expand(len * sizeof(float));
 
-        if (idx + len + 1000 > MAX_KERNEL_SIZE)
-            return 0;
         cqt.kernel_index[f].len = len;
         cqt.kernel_index[f].start = start;
 
@@ -536,7 +537,8 @@ WASM_EXPORT WASM_SIMD_FUNCTION void calc(void)
 
     fft_calc(cqt.fft_buf, cqt.fft_size);
 
-    for (int x = 0, m = 0; x < cqt.t_size; x++) {
+    const float *kernel = cqt.kernel;
+    for (int x = 0; x < cqt.t_size; x++) {
         int len = cqt.kernel_index[x].len;
         int start = cqt.kernel_index[x].start;
         if (!len) {
@@ -544,14 +546,14 @@ WASM_EXPORT WASM_SIMD_FUNCTION void calc(void)
             continue;
         }
 
-        Complex r = cqt_calc(cqt.kernel + m, start, len);
+        Complex r = cqt_calc(kernel, start, len);
 
         cqt.color_buf[x].r = sqrtf(cqt.sono_v * sqrtf(r.re));
         cqt.color_buf[x].g = sqrtf(cqt.sono_v * sqrtf(0.5f * (r.re + r.im)));
         cqt.color_buf[x].b = sqrtf(cqt.sono_v * sqrtf(r.im));
         cqt.color_buf[x].h = cqt.bar_v * sqrtf(0.5f * (r.re + r.im));
 
-        m += len;
+        kernel += len;
     }
 
     if (cqt.t_size != cqt.width) {

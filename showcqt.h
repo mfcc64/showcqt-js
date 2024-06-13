@@ -40,6 +40,7 @@ WASM_IMPORT double exp(double);
 WASM_IMPORT double ceil(double);
 WASM_IMPORT double floor(double);
 WASM_IMPORT float sqrtf(float);
+WASM_IMPORT void *memory_expand(int);
 
 #ifndef WASM_SIMD
 #define WASM_SIMD 0
@@ -54,7 +55,6 @@ WASM_IMPORT float sqrtf(float);
 #define MAX_FFT_SIZE 32768
 #define MAX_WIDTH 7680
 #define MAX_HEIGHT 4320
-#define MAX_KERNEL_SIZE (6*256*1024)
 #define MIN_VOL 1.0f
 #define MAX_VOL 100.0f
 
@@ -105,7 +105,7 @@ typedef struct ShowCQT {
 
     /* kernel */
     KernelIndex kernel_index[MAX_WIDTH*2];
-    float       kernel[MAX_KERNEL_SIZE];
+    float       *kernel;
 
     /* props */
     int         width;
