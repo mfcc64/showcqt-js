@@ -377,7 +377,6 @@ FFT_CALC_FUNC_SIMD(16384, 4096, 1)
 FFT_CALC2_FUNC_SIMD(8192, 4096)
 FFT_CALC2_FUNC_SIMD(32768, 16384)
 
-#define fft_calc_1024 fft_calc_1024_1
 #define fft_calc_4096 fft_calc_4096_1
 #define fft_calc_16384 fft_calc_16384_1
 #endif
