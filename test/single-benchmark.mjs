@@ -17,8 +17,8 @@ async function benchmark(name, width, height, rate, multi) {
 
     for (let x = 0; x < cqt.fft_size; x++) {
         const t = Math.round(x / rate * 1e6);
-        cqt.inputs[0][x] = 0.1 * ((t % 100000) / 100000 - (t % 28765) / 28765 + (t % 4341) % 4341 - (t % 256) % 256);
-        cqt.inputs[1][x] = 0.1 * ((t % 125000) / 125000 - (t % 18256) / 18256 + (t % 8888) % 8888 - (t % 128) % 128);
+        cqt.inputs[0][x] = 0.1 * ((t % 100000) / 100000 - (t % 28765) / 28765 + (t % 4341) / 4341 - (t % 256) / 256);
+        cqt.inputs[1][x] = 0.1 * ((t % 125000) / 125000 - (t % 18256) / 18256 + (t % 8888) / 8888 - (t % 128) / 128);
     }
 
     var t0 = performance.now();
