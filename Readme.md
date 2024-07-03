@@ -26,7 +26,7 @@ const { ShowCQT } = await import("showcqt");
 ### CDN
 ```js
 // use a specific version
-import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@2.2.0/showcqt.mjs";
+import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@2.2.1/showcqt.mjs";
 
 // use a specific major version
 import ShowCQT from "https://cdn.jsdelivr.net/npm/showcqt@2/showcqt.mjs";
