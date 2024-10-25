@@ -23,7 +23,7 @@
 
 const IMPORT = m => import(m);
 async function compile(url) {
-    try { return WebAssembly.compileStreaming(await fetch(url)); }
+    try { return WebAssembly.compileStreaming(await fetch(String(url))); }
     catch { return WebAssembly.compile((await IMPORT("node:fs")).readFileSync(url)); }
 }
 
